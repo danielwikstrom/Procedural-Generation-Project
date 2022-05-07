@@ -247,7 +247,7 @@ void Game::Render()
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
 	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(0.1);		//scale the terrain down a little. 
+	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(0.1f);		//scale the terrain down a little. 
 	m_world = m_world * newScale *newPosition3;
 
 	//setup and draw cube
