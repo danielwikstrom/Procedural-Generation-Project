@@ -513,7 +513,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 			//m_heightMap[index].y = m_randomMap[j * m_terrainHeight + i];
 			float perlini = (i * 0.03f);
 			float perlinj = (j * 0.03f);
-			m_heightMap[index].y = noise.noise(perlinj, perlini, 0) * 30;
+			m_heightMap[index].y = noise.noise(perlinj, perlini, 0) * 50;
 			m_heightMap[index].z = (float)j;
 		}
 	}

@@ -97,7 +97,7 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	return true;
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1, ID3D11ShaderResourceView* texture1)
+bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3, ID3D11ShaderResourceView* texture4, ID3D11ShaderResourceView* texture5)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
@@ -127,6 +127,10 @@ bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleM
 
 	//pass the desired texture to the pixel shader.
 	context->PSSetShaderResources(0, 1, &texture1);
+	context->PSSetShaderResources(1, 1, &texture2);
+	context->PSSetShaderResources(2, 1, &texture3);
+	context->PSSetShaderResources(3, 1, &texture4);
+	context->PSSetShaderResources(4, 1, &texture5);
 
 	return false;
 }

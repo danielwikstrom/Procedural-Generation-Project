@@ -12,6 +12,8 @@ struct InputCommands
 	bool left;
 	bool rotRight;
 	bool rotLeft;
+	bool rotUp;
+	bool rotDown;
 	bool generate;
 	bool smooth;
 };

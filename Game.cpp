@@ -74,8 +74,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Light.setDirection(-1.0f, -1.0f, 0.0f);
 
 	//setup camera
-	m_Camera01.setPosition(Vector3(0.0f, 0.6f, 4.0f));
-	m_Camera01.setRotation(Vector3(-90.0f, -180.0f, 0.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera01.setPosition(Vector3(0.0f, 10.0f, 4.0f));
+    m_Camera01.setRotation(Vector3(0.0f, 90.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
 	
 #ifdef DXTK_AUDIO
@@ -138,31 +138,63 @@ void Game::Update(DX::StepTimer const& timer)
 	//this is hacky,  i dont like this here.  
 	auto device = m_deviceResources->GetD3DDevice();
 
-	//note that currently.  Delta-time is not considered in the game object movement. 
-	if (m_gameInputCommands.left)
-	{
-		Vector3 rotation = m_Camera01.getRotation();
-		rotation.y = rotation.y += m_Camera01.getRotationSpeed();
-		m_Camera01.setRotation(rotation);
-	}
-	if (m_gameInputCommands.right)
-	{
-		Vector3 rotation = m_Camera01.getRotation();
-		rotation.y = rotation.y -= m_Camera01.getRotationSpeed();
-		m_Camera01.setRotation(rotation);
-	}
-	if (m_gameInputCommands.forward)
-	{
-		Vector3 position = m_Camera01.getPosition(); //get the position
-		position += (m_Camera01.getForward()*m_Camera01.getMoveSpeed()); //add the forward vector
-		m_Camera01.setPosition(position);
-	}
-	if (m_gameInputCommands.back)
-	{
-		Vector3 position = m_Camera01.getPosition(); //get the position
-		position -= (m_Camera01.getForward()*m_Camera01.getMoveSpeed()); //add the forward vector
-		m_Camera01.setPosition(position);
-	}
+    float deltaTime = float(timer.GetElapsedSeconds());
+    float rotationSpeed = m_Camera01.getRotationSpeed() * deltaTime;
+    float movementSpeed = m_Camera01.getMoveSpeed() * deltaTime;
+
+    if (m_gameInputCommands.forward)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position += (m_Camera01.getForward() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.back)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position -= (m_Camera01.getForward() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.right)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position += (m_Camera01.getRight() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.left)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position -= (m_Camera01.getRight() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.rotLeft)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.y = rotation.y += rotationSpeed;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotRight)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.y = rotation.y -= rotationSpeed;
+
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotUp)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.z = rotation.z -= rotationSpeed;
+        if (rotation.z <= 0.5f)
+            rotation.z = 0.5f;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotDown)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.z = rotation.z += rotationSpeed;
+        if (rotation.z >= 179.5f)
+            rotation.z = 179.5f;
+        m_Camera01.setRotation(rotation);
+    }
 
 	if (m_gameInputCommands.generate)
 	{
@@ -247,12 +279,12 @@ void Game::Render()
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
 	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(0.1f);		//scale the terrain down a little. 
+	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(1.0f);		//scale the terrain down a little. 
 	m_world = m_world * newScale *newPosition3;
 
 	//setup and draw cube
 	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
+	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
 	m_Terrain.Render(context);
 	
 	//render our GUI
@@ -375,6 +407,11 @@ void Game::CreateDeviceDependentResources()
 	//load Textures
 	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
 	CreateDDSTextureFromFile(device, L"EvilDrone_Diff.dds", nullptr,	m_texture2.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/snow.dds", nullptr, m_textureSnow.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/rock.dds", nullptr, m_textureRock.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/dirt.dds", nullptr, m_textureDirt.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/grass.dds", nullptr, m_textureGrass.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/sand.dds", nullptr,m_textureSand.ReleaseAndGetAddressOf());
 
 	//Initialise Render to texture
 	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 

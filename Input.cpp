@@ -23,6 +23,8 @@ void Input::Initialise(HWND window)
 	m_GameInput.left		= false;
 	m_GameInput.rotRight	= false;
 	m_GameInput.rotLeft		= false;
+	m_GameInput.rotUp = false;
+	m_GameInput.rotDown = false;
 	m_GameInput.smooth = false;
 }
 
@@ -41,18 +43,34 @@ void Input::Update()
 	//A key
 	if (kb.A)	m_GameInput.left = true;
 	else		m_GameInput.left = false;
-	
+
 	//D key
 	if (kb.D)	m_GameInput.right = true;
 	else		m_GameInput.right = false;
 
 	//W key
-	if (kb.W)	m_GameInput.forward	 = true;
+	if (kb.W)	m_GameInput.forward = true;
 	else		m_GameInput.forward = false;
 
 	//S key
 	if (kb.S)	m_GameInput.back = true;
 	else		m_GameInput.back = false;
+
+	//A key
+	if (kb.Up)	m_GameInput.rotUp = true;
+	else		m_GameInput.rotUp = false;
+
+	//D key
+	if (kb.Down)	m_GameInput.rotDown = true;
+	else		m_GameInput.rotDown = false;
+
+	//W key
+	if (kb.Left)	m_GameInput.rotLeft = true;
+	else		m_GameInput.rotLeft = false;
+
+	//S key
+	if (kb.Right)	m_GameInput.rotRight = true;
+	else		m_GameInput.rotRight = false;
 
 	//space
 	if (kb.Space) m_GameInput.generate = true;

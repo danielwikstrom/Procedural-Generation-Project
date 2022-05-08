@@ -94,6 +94,11 @@ private:
 	//textures 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_texture1;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_texture2;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureSnow;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureRock;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureDirt;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureGrass;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureSand;
 
 	//Shaders
 	Shader																	m_BasicShaderPair;

@@ -29,10 +29,10 @@ Camera::Camera()
 	m_right.x = 0.0f;
 	m_right.y = 0.0f;
 	m_right.z = 0.0f;
-	
+
 	//
-	m_movespeed = 0.30;
-	m_camRotRate = 3.0;
+	m_movespeed = 10.0;
+	m_camRotRate = 90;
 
 	//force update with initial values to generate other camera data correctly for first update. 
 	Update();
@@ -46,8 +46,9 @@ Camera::~Camera()
 void Camera::Update()
 {
 	//rotation in yaw - using the paramateric equation of a circle
-	m_forward.x = sin((m_orientation.y)*3.1415f / 180.0f);
-	m_forward.z = cos((m_orientation.y)*3.1415f / 180.0f);
+	m_forward.x = sin((m_orientation.y) * 3.1415f / 180.0f) * sin((m_orientation.z) * 3.1415f / 180.0f);
+	m_forward.z = cos((m_orientation.y) * 3.1415f / 180.0f) * sin((m_orientation.z) * 3.1415f / 180.0f);
+	m_forward.y = cos((m_orientation.z) * 3.1415f / 180.0f);
 	m_forward.Normalize();
 
 	//create right vector from look Direction
@@ -80,6 +81,10 @@ DirectX::SimpleMath::Vector3 Camera::getPosition()
 DirectX::SimpleMath::Vector3 Camera::getForward()
 {
 	return m_forward;
+}
+DirectX::SimpleMath::Vector3 Camera::getRight()
+{
+	return m_right;
 }
 
 void Camera::setRotation(DirectX::SimpleMath::Vector3 newRotation)
