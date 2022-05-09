@@ -58,17 +58,17 @@ void DeviceResources::CreateDeviceResources()
 {
     UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-#if defined(_DEBUG)
-    if (SdkLayersAvailable())
-    {
-        // If the project is in a debug build, enable debugging via SDK Layers with this flag.
-        creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    }
-    else
-    {
-        OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
-    }
-#endif
+//#if defined(_DEBUG)
+//    if (SdkLayersAvailable())
+//    {
+//        // If the project is in a debug build, enable debugging via SDK Layers with this flag.
+//        creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+//    }
+//    else
+//    {
+//        OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
+//    }
+//#endif
 
     // Determine DirectX hardware feature levels this app will support.
     static const D3D_FEATURE_LEVEL s_featureLevels[] =

@@ -143,16 +143,21 @@ float4 main(InputType input) : SV_TARGET
 	// textureColor = shaderTexture.Sample(SampleType, input.tex);
 
 	float4 SandColor = terrainTexture1.Sample(SampleType, input.tex);
-	float4 GrassColor = terrainTexture2.Sample(SampleType, input.tex);
+	float4 GrassColor = terrainTexture2.Sample(SampleType, input.tex * 0.3f);
 	float4 DirtColor = terrainTexture3.Sample(SampleType, input.tex * 3);
 	float4 RockColor = terrainTexture4.Sample(SampleType, input.tex * 3);
-	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);
-	float4 heightColors[] = {SandColor, GrassColor, DirtColor, RockColor, SnowColor};
+	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);	
+	//float4 SnowColor = float4(1.0, 1.0, 1.0, 1.0);
+	//float4 RockColor = float4(0.5, 0.5, 0.5, 1.0);
+	//float4 DirtColor = float4(0.5, 0.25, 0.0, 1.0);
+	//float4 SandColor = float4(0.9, 0.7, 0.2, 1.0);
+	//float4 GrassColor = float4(0.2, 0.5, 0.1, 1.0);
+	float4 heightColors[] = {GrassColor, GrassColor,DirtColor, RockColor, SnowColor, SnowColor};
 
 	
 
-	float minY = -20.5;
-	float maxY = 20.5;
+	float minY = -50.5;
+	float maxY = 1000.5;
 	float normalizedHeight = saturate((input.position3D.y - minY) / (maxY - minY));
 	
 
@@ -163,25 +168,18 @@ float4 main(InputType input) : SV_TARGET
 	//float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], perlinLerp);
 
 
-	float perlin = perlinNoise(-normalizedHeight * input.position3D.x * 0.05f, 0, normalizedHeight * input.position3D.z * 0.05f);
-	float perlinLerp = (perlin * 1) - floor(perlin * 1);
-	float perlinHeight = (normalizedHeight + perlinLerp)/2;
-	float colToUse = floor(perlinHeight * 4.99);
+	float perlin = perlinNoise(input.position3D.x * 0.05f, 0, input.position3D.z * 0.05f);
+	float perlinHeight = (normalizedHeight + (perlin*0.05));
+	float colToUse = floor(perlinHeight * 5);
 	float colToLerp = colToUse + 1;
 	colToLerp = clamp(colToLerp, 0, 4);
-
-	float colHeight = floor(normalizedHeight * 4.99);
-	float colHeight2 = colHeight + 1;
-	colHeight2 = clamp(colHeight, 0, 4);
 	float lerpingValue = (perlinHeight * 5) - colToUse;
-	//lerpingValue = ceil(lerpingValue * 3) / 3;
-	//lerpingValue = ceil(lerpingValue * 1);
+
+	lerpingValue = ceil(lerpingValue * 1)/1;
 	float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], lerpingValue);
-	//finalColor = lerpingValue > 0.2 && lerpingValue < 0.8 ? heightColors[colToLerp] : finalColor;
-	float4 heightColours = lerp(heightColors[(colHeight + colToUse)/2], heightColors[(colHeight2 + colToLerp)/2], lerpingValue);
 
 
-	color = color * lerpingValue;
+	color = color * finalColor;
 
     return color;
 }

@@ -74,8 +74,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Light.setDirection(-1.0f, -1.0f, 0.0f);
 
 	//setup camera
-	m_Camera01.setPosition(Vector3(0.0f, 10.0f, 4.0f));
-    m_Camera01.setRotation(Vector3(0.0f, 90.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera01.setPosition(Vector3(0.0f, 300.0f, 4.0f));
+    m_Camera01.setRotation(Vector3(0.0f, 45.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
 	
 #ifdef DXTK_AUDIO
@@ -206,6 +206,13 @@ void Game::Update(DX::StepTimer const& timer)
         m_Terrain.SmoothHeightMap(device);
     }
 
+    if (m_terrainDisplacementX != *m_Terrain.GetAmplitude() || m_terrainDisplacementY != *m_Terrain.GetWavelength())
+    {
+        m_terrainDisplacementX = *m_Terrain.GetAmplitude();
+        m_terrainDisplacementY = *m_Terrain.GetWavelength();
+        m_Terrain.GenerateHeightMap(device);
+    }
+
 	m_Camera01.Update();	//camera update.
 	m_Terrain.Update();		//terrain update.  doesnt do anything at the moment. 
 
@@ -279,7 +286,7 @@ void Game::Render()
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
 	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(1.0f);		//scale the terrain down a little. 
+	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(10.0f);		//scale the terrain down a little. 
 	m_world = m_world * newScale *newPosition3;
 
 	//setup and draw cube
@@ -291,7 +298,7 @@ void Game::Render()
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	
-
+    
     // Show the new frame.
     m_deviceResources->Present();
 }
@@ -394,7 +401,10 @@ void Game::CreateDeviceDependentResources()
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(context);
 
 	//setup our terrain
-	m_Terrain.Initialize(device, 128, 128);
+	m_Terrain.Initialize(device, 256, 256);
+    m_terrainDisplacementX = *m_Terrain.GetAmplitude();
+    m_terrainDisplacementY = *m_Terrain.GetWavelength();
+    m_Terrain.GenerateHeightMap(device);
 
 	//setup our test model
 	m_BasicModel.InitializeSphere(device);
@@ -437,7 +447,7 @@ void Game::CreateWindowSizeDependentResources()
         fovAngleY,
         aspectRatio,
         0.01f,
-        100.0f
+        10000.0f
     );
 }
 

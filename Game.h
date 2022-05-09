@@ -113,6 +113,9 @@ private:
 	RenderTexture*															m_FirstRenderPass;
 	RECT																	m_fullscreenRect;
 	RECT																	m_CameraViewRect;
+
+    float                                                                   m_terrainDisplacementX;
+    float                                                                   m_terrainDisplacementY;
 	
 
 

@@ -23,8 +23,8 @@ bool Terrain::Initialize(ID3D11Device* device, int terrainWidth, int terrainHeig
 	m_terrainHeight = terrainHeight;
 
 	m_frequency = m_terrainWidth / 20;
-	m_amplitude = 3.0;
-	m_wavelength = 1;
+	m_amplitude = 0;
+	m_wavelength = 0;
 
 	// Create the structure to hold the terrain data.
 	m_heightMap = new HeightMapType[m_terrainWidth * m_terrainHeight];
@@ -496,12 +496,13 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	int index;
 	float height = 0.0;
 
-	m_frequency = (6.283 / m_terrainHeight) / m_wavelength; //we want a wavelength of 1 to be a single wave over the whole terrain.  A single wave is 2 pi which is about 6.283
-	float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
-	m_randomMap = randomHeight;
+	//float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
+	//m_randomMap = randomHeight;
 	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
 	//in this case I will run a sin-wave through the terrain in one axis.
-
+	float heighestPointX = 0;
+	float heighestPointY = 0;
+	float heighestPointHeight = -MAXINT;
 	for (int j = 0; j < m_terrainHeight; j++)
 	{
 		for (int i = 0; i < m_terrainWidth; i++)
@@ -509,14 +510,26 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 			index = (m_terrainHeight * j) + i;
 
 			m_heightMap[index].x = (float)i;
-			//m_heightMap[index].y = (float)(cos((float)j *(m_frequency))*m_amplitude) + (float)(cos((float)i * (m_frequency)) * m_amplitude);
-			//m_heightMap[index].y = m_randomMap[j * m_terrainHeight + i];
-			float perlini = (i * 0.03f);
-			float perlinj = (j * 0.03f);
-			m_heightMap[index].y = noise.noise(perlinj, perlini, 0) * 50;
+			float perlini = (i * 0.02f + m_wavelength * 100 + 400);
+			float perlinj = (j * 0.02f + m_amplitude * 10 + 402);
+			float perlinVal = noise.noise(perlinj, perlini, 0);
+			perlinVal = abs(1-perlinVal) * 2 - 1;
+			perlinVal *= 40;
+			m_heightMap[index].y = perlinVal;
+
+			float height = m_heightMap[index].y;
 			m_heightMap[index].z = (float)j;
+
+			if (height > heighestPointHeight)
+			{
+				heighestPointX = i;
+				heighestPointY = j;
+				heighestPointHeight = height;
+			}
 		}
 	}
+
+	this->Volcanize(heighestPointX, heighestPointY, 10, 100);
 
 	result = CalculateNormals();
 	if (!result)
@@ -529,6 +542,84 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	{
 		return false;
 	}
+}
+
+void Terrain::Volcanize(int x, int y, float radius, float depth)
+{
+	int centerIndex = (m_terrainHeight * y) + x;
+	float centerX = m_heightMap[centerIndex].x;
+	float centerZ = m_heightMap[centerIndex].z;
+	float maxDepth = m_heightMap[centerIndex].y - depth;
+
+	for (int j = 0; j < m_terrainHeight; j++)
+	{
+		for (int i = 0; i < m_terrainWidth; i++)
+		{
+			
+			int index = (m_terrainHeight * j) + i;
+			float pointX = m_heightMap[index].x;
+			float pointZ = m_heightMap[index].z;
+			float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
+			if (distance <= radius)
+			{
+				m_heightMap[index].y = maxDepth + ((distance/radius) * (m_heightMap[index].y - maxDepth)); /*(depth - (radius - distance))*/;
+			}
+		}
+	}
+	 
+	//Smooth volcano
+	/*for (int smoothingRound = 0; smoothingRound < 1; smoothingRound++)
+	{
+		for (int j = 0; j < m_terrainHeight; j++)
+		{
+			for (int i = 0; i < m_terrainWidth; i++)
+			{
+				float value = 0.0f;
+				int numNeighbours = 0;
+				if (i > 0)
+				{
+					value += m_heightMap[j * m_terrainHeight + i - 1].y;
+					numNeighbours++;
+				}
+				if (i < m_terrainWidth - 1)
+				{
+					value += m_heightMap[j * m_terrainHeight + i + 1].y;
+					numNeighbours++;
+				}
+				if (j > 0)
+				{
+					value += m_heightMap[(j - 1) * m_terrainHeight + i].y;
+					numNeighbours++;
+				}
+				if (j < m_terrainHeight - 1)
+				{
+					value += m_heightMap[(j + 1) * m_terrainHeight + i].y;
+					numNeighbours++;
+				}
+				value /= numNeighbours;
+
+				int index = (m_terrainHeight * j) + i;
+				float pointX = m_heightMap[index].x;
+				float pointZ = m_heightMap[index].z;
+				float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
+				if (distance <= radius)
+				{
+					m_heightMap[j * m_terrainHeight + i].y = value;
+				}
+
+			}
+		}
+	}*/
+
+}
+
+float Terrain::DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y)
+{
+	float distanceX = p2X - p1X;
+	float distanceY = p2Y - p1Y;
+
+	float distance = sqrt(pow(distanceX, 2) + pow(distanceY, 2));
+	return distance;
 }
 
 bool Terrain::Update()
@@ -544,4 +635,14 @@ float* Terrain::GetWavelength()
 float* Terrain::GetAmplitude()
 {
 	return &m_amplitude;
+}
+
+float Terrain::GetWavelengthValue()
+{
+	return m_wavelength;
+}
+
+float Terrain::GetAmplitudeValue()
+{
+	return m_amplitude;
 }

@@ -3,6 +3,8 @@
 using namespace DirectX;
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
+#include <algorithm>
 #include "PerlinNoise.h"
 
 class Terrain
@@ -28,9 +30,13 @@ public:
 	void Render(ID3D11DeviceContext*);
 	bool SmoothHeightMap(ID3D11Device*);
 	bool GenerateHeightMap(ID3D11Device*);
+	void Volcanize(int x, int y, float radius, float depth);
+	float DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y);
 	bool Update();
 	float* GetWavelength();
 	float* GetAmplitude();
+	float GetWavelengthValue();
+	float GetAmplitudeValue();
 
 private:
 	bool CalculateNormals();
