@@ -104,6 +104,7 @@ private:
 	Shader																	m_BasicShaderPair;
 
 	//Scene. 
+    Terrain::VolcanoType                                                    m_volcano;
 	Terrain																	m_Terrain;
 	ModelClass																m_BasicModel;
 	ModelClass																m_BasicModel2;

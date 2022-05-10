@@ -14,7 +14,7 @@ public:
 	//we could extend this to load in only a vertex shader, only a pixel shader etc.  or specialised init for Geometry or domain shader. 
 	//All the methods here simply create new versions corresponding to your needs
 	bool InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psFilename);		//Loads the Vert / pixel Shader pair
-	bool SetShaderParameters(ID3D11DeviceContext* context, DirectX::SimpleMath::Matrix* world, DirectX::SimpleMath::Matrix* view, DirectX::SimpleMath::Matrix* projection, Light* sceneLight1, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3, ID3D11ShaderResourceView* texture4, ID3D11ShaderResourceView* texture5);
+	bool SetShaderParameters(ID3D11DeviceContext* context, DirectX::SimpleMath::Matrix* world, DirectX::SimpleMath::Matrix* view, DirectX::SimpleMath::Matrix* projection, Light* sceneLight1, DirectX::SimpleMath::Vector2 volcanoCenter, float volcanoRadius, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3, ID3D11ShaderResourceView* texture4, ID3D11ShaderResourceView* texture5);
 	void EnableShader(ID3D11DeviceContext * context);
 
 private:
@@ -35,6 +35,13 @@ private:
 		float padding;
 	};
 
+	struct VolcanoBufferType
+	{
+		DirectX::SimpleMath::Vector2 volcanoCenter;
+		float volcanoRadius;
+		float padding;
+	};
+
 	//buffer to pass in camera world Position
 	struct CameraBufferType
 	{
@@ -49,5 +56,6 @@ private:
 	ID3D11Buffer*															m_matrixBuffer;
 	ID3D11SamplerState*														m_sampleState;
 	ID3D11Buffer*															m_lightBuffer;
+	ID3D11Buffer*															m_volcanoBuffer;
 };
 

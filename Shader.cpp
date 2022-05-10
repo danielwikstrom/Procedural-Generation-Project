@@ -16,6 +16,7 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	D3D11_BUFFER_DESC	matrixBufferDesc;
 	D3D11_SAMPLER_DESC	samplerDesc;
 	D3D11_BUFFER_DESC	lightBufferDesc;
+	D3D11_BUFFER_DESC	volcanoBufferDesc;
 
 	//LOAD SHADER:	VERTEX
 	auto vertexShaderBuffer = DX::ReadData(vsFilename);
@@ -76,6 +77,19 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	device->CreateBuffer(&lightBufferDesc, NULL, &m_lightBuffer);
 
+	// Setup volcano buffer
+	// Setup the description of the light dynamic constant buffer that is in the pixel shader.
+	// Note that ByteWidth always needs to be a multiple of 16 if using D3D11_BIND_CONSTANT_BUFFER or CreateBuffer will fail.
+	volcanoBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	volcanoBufferDesc.ByteWidth = sizeof(VolcanoBufferType);
+	volcanoBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	volcanoBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	volcanoBufferDesc.MiscFlags = 0;
+	volcanoBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	device->CreateBuffer(&volcanoBufferDesc, NULL, &m_volcanoBuffer);
+
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -97,11 +111,12 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	return true;
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3, ID3D11ShaderResourceView* texture4, ID3D11ShaderResourceView* texture5)
+bool Shader::SetShaderParameters(ID3D11DeviceContext* context, DirectX::SimpleMath::Matrix* world, DirectX::SimpleMath::Matrix* view, DirectX::SimpleMath::Matrix* projection, Light* sceneLight1, DirectX::SimpleMath::Vector2 volcanoCenter, float volcanoRadius, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3, ID3D11ShaderResourceView* texture4, ID3D11ShaderResourceView* texture5)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
 	LightBufferType* lightPtr;
+	VolcanoBufferType* volcanoPtr;
 	DirectX::SimpleMath::Matrix  tworld, tview, tproj;
 
 	// Transpose the matrices to prepare them for the shader.
@@ -124,6 +139,14 @@ bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleM
 	lightPtr->padding = 0.0f;
 	context->Unmap(m_lightBuffer, 0);
 	context->PSSetConstantBuffers(0, 1, &m_lightBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
+
+	context->Map(m_volcanoBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	volcanoPtr = (VolcanoBufferType*)mappedResource.pData;
+	volcanoPtr->volcanoCenter = volcanoCenter;
+	volcanoPtr->volcanoRadius = volcanoRadius;
+	volcanoPtr->padding = 0.0f;
+	context->Unmap(m_volcanoBuffer, 0);
+	context->PSSetConstantBuffers(1, 1, &m_volcanoBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
 
 	//pass the desired texture to the pixel shader.
 	context->PSSetShaderResources(0, 1, &texture1);

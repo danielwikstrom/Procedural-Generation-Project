@@ -17,7 +17,7 @@ bool Terrain::Initialize(ID3D11Device* device, int terrainWidth, int terrainHeig
 	int index;
 	float height = 0.0;
 	bool result;
-
+	
 	// Save the dimensions of the terrain.
 	m_terrainWidth = terrainWidth;
 	m_terrainHeight = terrainHeight;
@@ -33,6 +33,10 @@ bool Terrain::Initialize(ID3D11Device* device, int terrainWidth, int terrainHeig
 		return false;
 	}
 	m_randomMap = new float[m_terrainWidth * m_terrainHeight];
+
+	VolcanoInfo = VolcanoType();
+	VolcanoInfo.center = DirectX::SimpleMath::Vector2(0, 0);
+	VolcanoInfo.radius = 10;
 
 	//this is how we calculate the texture coordinates first calculate the step size there will be between vertices. 
 	float textureCoordinatesStep = 5.0f / m_terrainWidth;  //tile 5 times across the terrain. 
@@ -529,7 +533,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 		}
 	}
 
-	this->Volcanize(heighestPointX, heighestPointY, 10, 100);
+	this->Volcanize(heighestPointX, heighestPointY, 10, 20);
 
 	result = CalculateNormals();
 	if (!result)
@@ -562,13 +566,17 @@ void Terrain::Volcanize(int x, int y, float radius, float depth)
 			float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
 			if (distance <= radius)
 			{
-				m_heightMap[index].y = maxDepth + ((distance/radius) * (m_heightMap[index].y - maxDepth)); /*(depth - (radius - distance))*/;
+				//m_heightMap[index].y = maxDepth + ((distance/radius) * (m_heightMap[index].y - maxDepth));
+				m_heightMap[index].y = maxDepth + pow(distance/radius, 2) * (m_heightMap[index].y - maxDepth);
 			}
 		}
 	}
+
+	VolcanoInfo.center = DirectX::SimpleMath::Vector2(centerX, centerZ);
+	VolcanoInfo.radius = radius;
 	 
 	//Smooth volcano
-	/*for (int smoothingRound = 0; smoothingRound < 1; smoothingRound++)
+	/*for (int smoothingRound = 0; smoothingRound < 0; smoothingRound++)
 	{
 		for (int j = 0; j < m_terrainHeight; j++)
 		{
@@ -637,12 +645,7 @@ float* Terrain::GetAmplitude()
 	return &m_amplitude;
 }
 
-float Terrain::GetWavelengthValue()
+Terrain::VolcanoType* Terrain::GetVolcanoInfo()
 {
-	return m_wavelength;
-}
-
-float Terrain::GetAmplitudeValue()
-{
-	return m_amplitude;
+	return &VolcanoInfo;
 }

@@ -17,6 +17,12 @@ cbuffer LightBuffer : register(b0)
     float padding;
 };
 
+cbuffer VolcanoBuffer : register(b1)
+{
+	float2 volcanoCenter;
+	float volcanoRadius;
+}
+
 struct InputType
 {
     float4 position : SV_POSITION;
@@ -122,6 +128,26 @@ float perlinNoise(float x, float y, float z)
 	return nxyz;
 }
 
+float IsVolcano(float2 pos)
+{
+	float2 distanceVector = pos - (volcanoCenter * 10.0f);
+	float distance = sqrt(pow(distanceVector.x, 2) + pow(distanceVector.y, 2));
+	distance = saturate(distance / (volcanoRadius * 40));
+
+
+	return pow(distance,16);
+}
+
+float IsLava(float2 pos)
+{
+	float2 distanceVector = pos - (volcanoCenter * 10.0f);
+	float distance = sqrt(pow(distanceVector.x, 2) + pow(distanceVector.y, 2));
+	distance = saturate(floor(distance / (volcanoRadius * 8)));
+
+
+	return distance;
+}
+
 float4 main(InputType input) : SV_TARGET
 {
 	float4	textureColor;
@@ -146,7 +172,8 @@ float4 main(InputType input) : SV_TARGET
 	float4 GrassColor = terrainTexture2.Sample(SampleType, input.tex * 0.3f);
 	float4 DirtColor = terrainTexture3.Sample(SampleType, input.tex * 3);
 	float4 RockColor = terrainTexture4.Sample(SampleType, input.tex * 3);
-	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);	
+	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);
+	float4 LavaColour = float4(1.0, 0.4, 0.2, 1.0);
 	//float4 SnowColor = float4(1.0, 1.0, 1.0, 1.0);
 	//float4 RockColor = float4(0.5, 0.5, 0.5, 1.0);
 	//float4 DirtColor = float4(0.5, 0.25, 0.0, 1.0);
@@ -158,7 +185,10 @@ float4 main(InputType input) : SV_TARGET
 
 	float minY = -50.5;
 	float maxY = 1000.5;
-	float normalizedHeight = saturate((input.position3D.y - minY) / (maxY - minY));
+
+	float minX = 0;
+	float maxX = 2560;
+	float normalizedHeight = saturate(floor(input.position3D.y - minY) / (maxY - minY));
 	
 
 	//float perlin = perlinNoise(input.position3D.x * 0.5f, input.position3D.y * 0.0f , input.position3D.z * 0.5f);
@@ -169,7 +199,7 @@ float4 main(InputType input) : SV_TARGET
 
 
 	float perlin = perlinNoise(input.position3D.x * 0.05f, 0, input.position3D.z * 0.05f);
-	float perlinHeight = (normalizedHeight + (perlin*0.05));
+	float perlinHeight = saturate(normalizedHeight + (perlin*0.05));
 	float colToUse = floor(perlinHeight * 5);
 	float colToLerp = colToUse + 1;
 	colToLerp = clamp(colToLerp, 0, 4);
@@ -178,8 +208,13 @@ float4 main(InputType input) : SV_TARGET
 	lerpingValue = ceil(lerpingValue * 1)/1;
 	float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], lerpingValue);
 
+	float2 pos = float2(input.position3D.x, input.position3D.z);
+	finalColor = lerp(RockColor * 0.5, finalColor, IsVolcano(pos)) * color;
+	finalColor = lerp(LavaColour, finalColor, IsLava(pos));
 
-	color = color * finalColor;
+
+
+	color = finalColor;
 
     return color;
 }

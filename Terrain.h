@@ -26,6 +26,11 @@ public:
 	Terrain();
 	~Terrain();
 
+	struct VolcanoType
+	{
+		DirectX::SimpleMath::Vector2 center;
+		float radius;
+	};
 	bool Initialize(ID3D11Device*, int terrainWidth, int terrainHeight);
 	void Render(ID3D11DeviceContext*);
 	bool SmoothHeightMap(ID3D11Device*);
@@ -35,8 +40,7 @@ public:
 	bool Update();
 	float* GetWavelength();
 	float* GetAmplitude();
-	float GetWavelengthValue();
-	float GetAmplitudeValue();
+	VolcanoType* GetVolcanoInfo();
 
 private:
 	bool CalculateNormals();
@@ -54,6 +58,7 @@ private:
 	float m_frequency, m_amplitude, m_wavelength;
 	HeightMapType* m_heightMap;
 	float* m_randomMap;
+	VolcanoType VolcanoInfo;
 
 	//arrays for our generated objects Made by directX
 	std::vector<VertexPositionNormalTexture> preFabVertices;

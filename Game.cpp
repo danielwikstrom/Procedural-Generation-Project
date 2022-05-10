@@ -77,6 +77,9 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Camera01.setPosition(Vector3(0.0f, 300.0f, 4.0f));
     m_Camera01.setRotation(Vector3(0.0f, 45.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
+    //m_volcano = Terrain::VolcanoType();
+    //m_volcano.center = DirectX::SimpleMath::Vector2(0, 0);
+    //m_volcano.radius = 10;
 	
 #ifdef DXTK_AUDIO
     // Create DirectXTK for Audio objects
@@ -199,6 +202,8 @@ void Game::Update(DX::StepTimer const& timer)
 	if (m_gameInputCommands.generate)
 	{
 		m_Terrain.GenerateHeightMap(device);
+        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
 	}
 
     if (m_gameInputCommands.smooth)
@@ -211,6 +216,8 @@ void Game::Update(DX::StepTimer const& timer)
         m_terrainDisplacementX = *m_Terrain.GetAmplitude();
         m_terrainDisplacementY = *m_Terrain.GetWavelength();
         m_Terrain.GenerateHeightMap(device);
+        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
     }
 
 	m_Camera01.Update();	//camera update.
@@ -291,7 +298,7 @@ void Game::Render()
 
 	//setup and draw cube
 	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
+	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_volcano.center, m_volcano.radius, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
 	m_Terrain.Render(context);
 	
 	//render our GUI
@@ -404,7 +411,10 @@ void Game::CreateDeviceDependentResources()
 	m_Terrain.Initialize(device, 256, 256);
     m_terrainDisplacementX = *m_Terrain.GetAmplitude();
     m_terrainDisplacementY = *m_Terrain.GetWavelength();
+
     m_Terrain.GenerateHeightMap(device);
+    m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+    m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
 
 	//setup our test model
 	m_BasicModel.InitializeSphere(device);
