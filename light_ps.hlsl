@@ -184,8 +184,8 @@ float4 main(InputType input) : SV_TARGET
 
 	
 
-	float minY = -50.5;
-	float maxY = 1000.5;
+	float minY = -200.5;
+	float maxY = 200;
 
 	float minX = 0;
 	float maxX = 2560;
@@ -199,7 +199,7 @@ float4 main(InputType input) : SV_TARGET
 	//float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], perlinLerp);
 
 
-	float perlin = perlinNoise(input.position3D.x * 0.03f, 0, input.position3D.z * 0.03f);
+	float perlin = perlinNoise(input.position3D.x * 0.05f, 0, input.position3D.z * 0.05f);
 	float perlinHeight = saturate(normalizedHeight + (perlin*0.04));
 	float colToUse = floor(perlinHeight * 5);
 	float colToLerp = colToUse + 1;
@@ -214,15 +214,12 @@ float4 main(InputType input) : SV_TARGET
 
 	float frq = 0.001;
 	float amp = 8;
-	//float lavaPerlin = perlinNoise(input.position3D.x * 0.06f, 0, input.position3D.z * 0.06f);
-	//float lavaPerlin = perlinNoise(input.position3D.x * 0.06f, 0, input.position3D.z * 0.06f);
 	float lavaFunction = sin(input.position3D.x * frq * (perlin)) * amp * perlin + sin(input.position3D.z * frq * (perlin)) * amp * perlin;
 	lavaFunction *= 0.8;
-	//lavaPerlin = saturate((lavaPerlin * 5));
 
 	float4 LavaLerped = lerp(LavaColour2, LavaColour1, lavaFunction);
 	float lavaLerp = saturate(ceil(1 - lavaFunction));
-	float4 LavaColourFinal = lerp(finalColor, LavaLerped, lavaLerp);
+	float4 LavaColourFinal = lerp(RockColor * 0.2, LavaLerped, lavaLerp);
 	finalColor = lerp(LavaColourFinal, finalColor, IsLava(pos));
 
 
