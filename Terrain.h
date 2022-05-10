@@ -35,8 +35,9 @@ public:
 	void Render(ID3D11DeviceContext*);
 	bool SmoothHeightMap(ID3D11Device*);
 	bool GenerateHeightMap(ID3D11Device*);
-	void Volcanize(int x, int y, float radius, float depth);
+	void Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth);
 	float DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y);
+	DirectX::SimpleMath::Vector2 GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ);
 	bool Update();
 	float* GetWavelength();
 	float* GetAmplitude();

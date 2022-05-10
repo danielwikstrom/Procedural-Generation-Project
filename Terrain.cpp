@@ -504,9 +504,6 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	//m_randomMap = randomHeight;
 	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
 	//in this case I will run a sin-wave through the terrain in one axis.
-	float heighestPointX = 0;
-	float heighestPointY = 0;
-	float heighestPointHeight = -MAXINT;
 	for (int j = 0; j < m_terrainHeight; j++)
 	{
 		for (int i = 0; i < m_terrainWidth; i++)
@@ -520,20 +517,15 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 			perlinVal = abs(1-perlinVal) * 2 - 1;
 			perlinVal *= 40;
 			m_heightMap[index].y = perlinVal;
-
-			float height = m_heightMap[index].y;
 			m_heightMap[index].z = (float)j;
 
-			if (height > heighestPointHeight)
-			{
-				heighestPointX = i;
-				heighestPointY = j;
-				heighestPointHeight = height;
-			}
 		}
 	}
 
-	this->Volcanize(heighestPointX, heighestPointY, 10, 20);
+
+
+	// Volcano spawns only in interior 80% of the map
+	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.1, m_terrainHeight * 0.9, m_terrainWidth * 0.1, m_terrainWidth * 0.9), 10, 70);
 
 	result = CalculateNormals();
 	if (!result)
@@ -548,12 +540,49 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	}
 }
 
-void Terrain::Volcanize(int x, int y, float radius, float depth)
+DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ)
 {
-	int centerIndex = (m_terrainHeight * y) + x;
+	DirectX::SimpleMath::Vector2 highestPeakPos;
+
+	int index;
+	float heighestPointX = 0;
+	float heighestPointY = 0;
+	float heighestPointHeight = -MAXINT;
+
+	for (int j = startPosX; j < endPosX; j++)
+	{
+		for (int i = startPosZ; i < endPosZ; i++)
+		{
+			index = (m_terrainHeight * j) + i;
+			float height = m_heightMap[index].y;
+			//Check surrounding peaks
+			if ((height > m_heightMap[(m_terrainHeight * j) + i + 1].y)
+				&& (height > m_heightMap[(m_terrainHeight * j) + i - 1].y)
+				&& (height > m_heightMap[(m_terrainHeight * (j + 1)) + i].y)
+				&& (height > m_heightMap[(m_terrainHeight * (j - 1)) + i].y)
+				&& height > heighestPointHeight)
+			{
+				heighestPointHeight = height;
+				heighestPointX = i;
+				heighestPointY = j;
+			}
+		}
+	}
+
+	highestPeakPos.x = heighestPointX;
+	highestPeakPos.y = heighestPointY;
+
+	return highestPeakPos;
+}
+
+void Terrain::Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth)
+{
+	int centerIndex = (m_terrainHeight * center.y) + center.x;
 	float centerX = m_heightMap[centerIndex].x;
 	float centerZ = m_heightMap[centerIndex].z;
 	float maxDepth = m_heightMap[centerIndex].y - depth;
+
+
 
 	for (int j = 0; j < m_terrainHeight; j++)
 	{
@@ -566,8 +595,8 @@ void Terrain::Volcanize(int x, int y, float radius, float depth)
 			float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
 			if (distance <= radius)
 			{
-				//m_heightMap[index].y = maxDepth + ((distance/radius) * (m_heightMap[index].y - maxDepth));
-				m_heightMap[index].y = maxDepth + pow(distance/radius, 2) * (m_heightMap[index].y - maxDepth);
+				//m_heightMap[index].y = maxDepth;
+				m_heightMap[index].y = maxDepth + (pow(distance/radius, 2)/4 + 0.75) * (m_heightMap[index].y - maxDepth);
 			}
 		}
 	}
@@ -576,7 +605,7 @@ void Terrain::Volcanize(int x, int y, float radius, float depth)
 	VolcanoInfo.radius = radius;
 	 
 	//Smooth volcano
-	/*for (int smoothingRound = 0; smoothingRound < 0; smoothingRound++)
+	for (int smoothingRound = 0; smoothingRound < 0; smoothingRound++)
 	{
 		for (int j = 0; j < m_terrainHeight; j++)
 		{
@@ -617,7 +646,7 @@ void Terrain::Volcanize(int x, int y, float radius, float depth)
 
 			}
 		}
-	}*/
+	}
 
 }
 

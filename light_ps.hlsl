@@ -173,7 +173,8 @@ float4 main(InputType input) : SV_TARGET
 	float4 DirtColor = terrainTexture3.Sample(SampleType, input.tex * 3);
 	float4 RockColor = terrainTexture4.Sample(SampleType, input.tex * 3);
 	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);
-	float4 LavaColour = float4(1.0, 0.4, 0.2, 1.0);
+	float4 LavaColour1 = float4(1.0, 0.1, 0.0, 1.0);
+	float4 LavaColour2 = float4(1.0, 1.0, 0.0, 1.0);
 	//float4 SnowColor = float4(1.0, 1.0, 1.0, 1.0);
 	//float4 RockColor = float4(0.5, 0.5, 0.5, 1.0);
 	//float4 DirtColor = float4(0.5, 0.25, 0.0, 1.0);
@@ -198,8 +199,8 @@ float4 main(InputType input) : SV_TARGET
 	//float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], perlinLerp);
 
 
-	float perlin = perlinNoise(input.position3D.x * 0.05f, 0, input.position3D.z * 0.05f);
-	float perlinHeight = saturate(normalizedHeight + (perlin*0.05));
+	float perlin = perlinNoise(input.position3D.x * 0.03f, 0, input.position3D.z * 0.03f);
+	float perlinHeight = saturate(normalizedHeight + (perlin*0.04));
 	float colToUse = floor(perlinHeight * 5);
 	float colToLerp = colToUse + 1;
 	colToLerp = clamp(colToLerp, 0, 4);
@@ -210,7 +211,19 @@ float4 main(InputType input) : SV_TARGET
 
 	float2 pos = float2(input.position3D.x, input.position3D.z);
 	finalColor = lerp(RockColor * 0.5, finalColor, IsVolcano(pos)) * color;
-	finalColor = lerp(LavaColour, finalColor, IsLava(pos));
+
+	float frq = 0.001;
+	float amp = 8;
+	//float lavaPerlin = perlinNoise(input.position3D.x * 0.06f, 0, input.position3D.z * 0.06f);
+	//float lavaPerlin = perlinNoise(input.position3D.x * 0.06f, 0, input.position3D.z * 0.06f);
+	float lavaFunction = sin(input.position3D.x * frq * (perlin)) * amp * perlin + sin(input.position3D.z * frq * (perlin)) * amp * perlin;
+	lavaFunction *= 0.8;
+	//lavaPerlin = saturate((lavaPerlin * 5));
+
+	float4 LavaLerped = lerp(LavaColour2, LavaColour1, lavaFunction);
+	float lavaLerp = saturate(ceil(1 - lavaFunction));
+	float4 LavaColourFinal = lerp(finalColor, LavaLerped, lavaLerp);
+	finalColor = lerp(LavaColourFinal, finalColor, IsLava(pos));
 
 
 
