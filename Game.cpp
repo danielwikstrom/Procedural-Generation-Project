@@ -140,7 +140,7 @@ void Game::Update(DX::StepTimer const& timer)
 {	
 	//this is hacky,  i dont like this here.  
 	auto device = m_deviceResources->GetD3DDevice();
-
+    
     float deltaTime = float(timer.GetElapsedSeconds());
     float rotationSpeed = m_Camera01.getRotationSpeed() * deltaTime;
     float movementSpeed = m_Camera01.getMoveSpeed() * deltaTime;
@@ -314,7 +314,11 @@ void Game::Render()
     m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
     m_ball.Render(context);
 	
+    ///APPLY PHYSICS TO BALL
+    DirectX::SimpleMath::Vector3 newPos;
+    DirectX::SimpleMath::Vector3 newVelocity;
 
+    newVelocity = ballMovement.CurrentVelocity;
 
 
 	//render our GUI

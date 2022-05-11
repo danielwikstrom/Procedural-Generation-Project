@@ -57,6 +57,13 @@ private:
 		DirectX::XMMATRIX projection;
 	}; 
 
+    struct BallPhysics
+    {
+        DirectX::SimpleMath::Vector3 CurrentPosiiton;
+        DirectX::SimpleMath::Vector3 CurrentVelocity;
+        float mass;
+    };
+
     void Update(DX::StepTimer const& timer);
     void Render();
     void Clear();
@@ -118,6 +125,8 @@ private:
 
     float                                                                   m_terrainDisplacementX;
     float                                                                   m_terrainDisplacementY;
+
+    BallPhysics                                                             ballMovement;
 	
 
 
