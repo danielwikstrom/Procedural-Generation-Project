@@ -28,7 +28,7 @@
     <ClInclude Include="Camera.h">
       <Filter>Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="Shader.h">
+    <ClInclude Include="TerrainShader.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="modelclass.h">
@@ -69,6 +69,9 @@
       <Filter>Imgui</Filter>
     </ClInclude>
     <ClInclude Include="PerlinNoise.h" />
+    <ClInclude Include="BasicShader.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -80,7 +83,7 @@
     <ClCompile Include="Camera.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="Shader.cpp">
+    <ClCompile Include="TerrainShader.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="modelclass.cpp">
@@ -115,6 +118,9 @@
       <Filter>Imgui</Filter>
     </ClCompile>
     <ClCompile Include="PerlinNoise.cpp" />
+    <ClCompile Include="BasicShader.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />
@@ -140,6 +146,12 @@
       <Filter>Assets</Filter>
     </FxCompile>
     <FxCompile Include="colour_vs.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="terrain_light_ps.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="terrain_light_vs.hlsl">
       <Filter>Assets</Filter>
     </FxCompile>
     <FxCompile Include="light_ps.hlsl">

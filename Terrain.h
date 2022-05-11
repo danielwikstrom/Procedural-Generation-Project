@@ -30,6 +30,7 @@ public:
 	{
 		DirectX::SimpleMath::Vector2 center;
 		float radius;
+		float mountainRadius;
 	};
 	bool Initialize(ID3D11Device*, int terrainWidth, int terrainHeight);
 	void Render(ID3D11DeviceContext*);

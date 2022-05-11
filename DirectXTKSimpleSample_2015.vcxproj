@@ -166,6 +166,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BasicShader.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="Game.h" />
@@ -184,11 +185,12 @@
     <ClInclude Include="PerlinNoise.h" />
     <ClInclude Include="ReadData.h" />
     <ClInclude Include="RenderTexture.h" />
-    <ClInclude Include="Shader.h" />
+    <ClInclude Include="TerrainShader.h" />
     <ClInclude Include="StepTimer.h" />
     <ClInclude Include="Terrain.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BasicShader.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="Game.cpp" />
@@ -210,7 +212,7 @@
     </ClCompile>
     <ClCompile Include="PerlinNoise.cpp" />
     <ClCompile Include="RenderTexture.cpp" />
-    <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="TerrainShader.cpp" />
     <ClCompile Include="Terrain.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -238,6 +240,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="light_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="terrain_light_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="terrain_light_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
     </FxCompile>
   </ItemGroup>

@@ -74,8 +74,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Light.setDirection(-1.0f, -1.0f, 0.0f);
 
 	//setup camera
-	m_Camera01.setPosition(Vector3(0.0f, 300.0f, 4.0f));
-    m_Camera01.setRotation(Vector3(0.0f, 45.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera01.setPosition(Vector3(-100.0f, 1300.0f, 1280.0f));
+    m_Camera01.setRotation(Vector3(0.0f, 90.0f, 120.0f));	
 
     //m_volcano = Terrain::VolcanoType();
     //m_volcano.center = DirectX::SimpleMath::Vector2(0, 0);
@@ -204,6 +204,7 @@ void Game::Update(DX::StepTimer const& timer)
 		m_Terrain.GenerateHeightMap(device);
         m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
         m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
 	}
 
     if (m_gameInputCommands.smooth)
@@ -218,6 +219,7 @@ void Game::Update(DX::StepTimer const& timer)
         m_Terrain.GenerateHeightMap(device);
         m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
         m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
     }
 
 	m_Camera01.Update();	//camera update.
@@ -293,14 +295,28 @@ void Game::Render()
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
 	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(10.0f);		//scale the terrain down a little. 
+	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(20.0f);		//scale the terrain down a little. 
 	m_world = m_world * newScale *newPosition3;
 
-	//setup and draw cube
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_volcano.center, m_volcano.radius, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
+	//setup and draw terrain
+    m_TerrainShader.EnableShader(context);
+    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
 	m_Terrain.Render(context);
+
+    //BALL
+    m_world = SimpleMath::Matrix::Identity; //set world back to identity
+    SimpleMath::Matrix positionBall = SimpleMath::Matrix::CreateTranslation(200.0f, 1200.0f, 1280.0f);
+    SimpleMath::Matrix scaleBall = SimpleMath::Matrix::CreateScale(20.0f);		//scale the terrain down a little. 
+    m_world = m_world * scaleBall * positionBall;
+
+    //setup and draw ball
+    m_BallShader.EnableShader(context);
+    m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
+    m_ball.Render(context);
 	
+
+
+
 	//render our GUI
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -408,21 +424,21 @@ void Game::CreateDeviceDependentResources()
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(context);
 
 	//setup our terrain
-	m_Terrain.Initialize(device, 256, 256);
+	m_Terrain.Initialize(device, 128, 128);
     m_terrainDisplacementX = *m_Terrain.GetAmplitude();
     m_terrainDisplacementY = *m_Terrain.GetWavelength();
 
     m_Terrain.GenerateHeightMap(device);
     m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
     m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+    m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
 
 	//setup our test model
-	m_BasicModel.InitializeSphere(device);
-	m_BasicModel2.InitializeModel(device,"drone.obj");
-	m_BasicModel3.InitializeBox(device, 10.0f, 0.1f, 10.0f);	//box includes dimensions
+	m_ball.InitializeSphere(device);
 
 	//load and set up our Vertex and Pixel Shaders
-	m_BasicShaderPair.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_TerrainShader.InitStandard(device, L"terrain_light_vs.cso", L"terrain_light_ps.cso");
+    m_BallShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
 
 	//load Textures
 	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
@@ -431,7 +447,8 @@ void Game::CreateDeviceDependentResources()
     CreateDDSTextureFromFile(device, L"textures/rock.dds", nullptr, m_textureRock.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/dirt.dds", nullptr, m_textureDirt.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/grass.dds", nullptr, m_textureGrass.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/sand.dds", nullptr,m_textureSand.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/sand.dds", nullptr, m_textureSand.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/bball.dds", nullptr,m_textureBall.ReleaseAndGetAddressOf());
 
 	//Initialise Render to texture
 	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 

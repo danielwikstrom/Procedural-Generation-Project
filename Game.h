@@ -5,7 +5,8 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-#include "Shader.h"
+#include "TerrainShader.h"
+#include "BasicShader.h"
 #include "modelclass.h"
 #include "Light.h"
 #include "Input.h"
@@ -99,16 +100,16 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureDirt;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureGrass;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureSand;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureBall;
 
 	//Shaders
-	Shader																	m_BasicShaderPair;
+    TerrainShader															m_TerrainShader;
+    BasicShader															    m_BallShader;
 
 	//Scene. 
     Terrain::VolcanoType                                                    m_volcano;
 	Terrain																	m_Terrain;
-	ModelClass																m_BasicModel;
-	ModelClass																m_BasicModel2;
-	ModelClass																m_BasicModel3;
+	ModelClass																m_ball;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
