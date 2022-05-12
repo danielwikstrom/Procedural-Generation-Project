@@ -54,6 +54,9 @@ void Camera::Update()
 	//create right vector from look Direction
 	m_forward.Cross(DirectX::SimpleMath::Vector3::UnitY, m_right);
 
+
+	m_forward.Cross(m_right, m_up);
+
 	//update lookat point
 	m_lookat = m_position + m_forward;
 
@@ -85,6 +88,12 @@ DirectX::SimpleMath::Vector3 Camera::getForward()
 DirectX::SimpleMath::Vector3 Camera::getRight()
 {
 	return m_right;
+}
+
+
+DirectX::SimpleMath::Vector3 Camera::getUp()
+{
+	return m_up;
 }
 
 void Camera::setRotation(DirectX::SimpleMath::Vector3 newRotation)

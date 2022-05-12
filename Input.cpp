@@ -26,6 +26,7 @@ void Input::Initialise(HWND window)
 	m_GameInput.rotUp = false;
 	m_GameInput.rotDown = false;
 	m_GameInput.smooth = false;
+	m_GameInput.launch = false;
 }
 
 void Input::Update()
@@ -72,10 +73,23 @@ void Input::Update()
 	if (kb.Right)	m_GameInput.rotRight = true;
 	else		m_GameInput.rotRight = false;
 
-	//space
-	if (kb.Space) m_GameInput.generate = true;
-	else		m_GameInput.generate = false;
 
+	if (!kb.Space && m_GameInput.isPressingLaunch)
+	{
+		m_GameInput.launchButtonUp = true;
+	}
+	else
+	{
+		m_GameInput.launchButtonUp = false;
+	}
+	if (kb.Space)
+	{
+		m_GameInput.isPressingLaunch = true;
+	}
+	else
+	{
+		m_GameInput.isPressingLaunch = false;
+	}
 
 	//G key
 	if (kb.G && !pG)

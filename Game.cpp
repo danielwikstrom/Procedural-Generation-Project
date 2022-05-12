@@ -49,13 +49,13 @@ void Game::Initialize(HWND window, int width, int height)
 
 	//setup imgui.  its up here cos we need the window handle too
 	//pulled from imgui directx11 example
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	ImGui::StyleColorsDark();
-	ImGui_ImplWin32_Init(window);		//tie to our window
-	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());	//tie to directx
+	//IMGUI_CHECKVERSION();
+	//ImGui::CreateContext();
+	//ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	//ImGui::StyleColorsDark();
+	//ImGui_ImplWin32_Init(window);		//tie to our window
+	//ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());	//tie to directx
 
 	m_fullscreenRect.left = 0;
 	m_fullscreenRect.top = 0;
@@ -76,6 +76,12 @@ void Game::Initialize(HWND window, int width, int height)
 	//setup camera
 	m_Camera01.setPosition(Vector3(-100.0f, 1300.0f, 1280.0f));
     m_Camera01.setRotation(Vector3(0.0f, 90.0f, 120.0f));	
+
+    ballMovement.mass = 100;
+    ballMovement.CurrentPosiiton = m_Camera01.getPosition();
+    ballMovement.CurrentVelocity = Vector3(0, 0, 0);
+    ballTimer = ballMaxTime;
+    LaunchForce = MinLaunchForce;
 
     //m_volcano = Terrain::VolcanoType();
     //m_volcano.center = DirectX::SimpleMath::Vector2(0, 0);
@@ -206,6 +212,29 @@ void Game::Update(DX::StepTimer const& timer)
         m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
         m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
 	}
+    if (!isKinematic)
+    {
+        if (m_gameInputCommands.isPressingLaunch)
+        {
+            if (LaunchForce <= MaxLaunchForce)
+            {
+                LaunchForce += m_timer.GetElapsedSeconds() * ((MaxLaunchForce - MinLaunchForce)/2);
+            }
+            else
+            {
+                LaunchForce = MaxLaunchForce;
+            }
+        }
+        if (m_gameInputCommands.launchButtonUp)
+        {
+            isKinematic = true;
+        }
+    }
+
+    else
+    {
+        LaunchForce = 0;
+    }
 
     if (m_gameInputCommands.smooth)
     {
@@ -282,9 +311,7 @@ void Game::Render()
 	auto depthTargetView = m_deviceResources->GetDepthStencilView();
 
     // Draw Text to the screen
-    m_sprites->Begin();
-		m_font->DrawString(m_sprites.get(), L"Procedural Methods", XMFLOAT2(10, 10), Colors::Yellow);
-    m_sprites->End();
+
 
 	//Set Rendering states. 
 	context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
@@ -295,41 +322,238 @@ void Game::Render()
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
 	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(20.0f);		//scale the terrain down a little. 
+	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(terrainScale);		//scale the terrain down a little. 
 	m_world = m_world * newScale *newPosition3;
 
 	//setup and draw terrain
     m_TerrainShader.EnableShader(context);
-    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
+    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(),
+        m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
 	m_Terrain.Render(context);
 
+	
+    ///APPLY PHYSICS TO BALL
+	if (isKinematic)
+	{
+		if (ballTimer > 0)
+		{
+			float deltaTime = float(m_timer.GetElapsedSeconds());
+			DirectX::SimpleMath::Vector3 newPos;
+			DirectX::SimpleMath::Vector3 newVelocity;
+			DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
+			DirectX::SimpleMath::Vector3 acceleration = (gravity)+(m_Camera01.getForward() * LaunchForce);
+
+			newVelocity = ballMovement.CurrentVelocity + (acceleration * deltaTime);
+			newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
+			ballMovement.CurrentPosiiton = newPos;
+			ballMovement.CurrentVelocity = newVelocity;
+            ballTimer -= m_timer.GetElapsedSeconds();
+		}
+        else
+        {
+            isKinematic = false;
+            ballTimer = ballMaxTime;
+            ballMovement.CurrentVelocity = Vector3(0, 0, 0);
+            ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
+            LaunchForce = MinLaunchForce;
+        }
+
+	}
+    else
+    {
+        ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50 + m_Camera01.getUp() * -30;
+    }
+    Vector3 collision;
+    if (this->CheckSphereCollision(collision))
+    {
+        isKinematic = false;
+        ballTimer = ballMaxTime;
+        ballMovement.CurrentVelocity = Vector3(0, 0, 0);
+        ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
+        LaunchForce = MinLaunchForce;
+    };
     //BALL
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
-    SimpleMath::Matrix positionBall = SimpleMath::Matrix::CreateTranslation(200.0f, 1200.0f, 1280.0f);
-    SimpleMath::Matrix scaleBall = SimpleMath::Matrix::CreateScale(20.0f);		//scale the terrain down a little. 
+    SimpleMath::Matrix positionBall = SimpleMath::Matrix::CreateTranslation(ballMovement.CurrentPosiiton);
+    SimpleMath::Matrix scaleBall = SimpleMath::Matrix::CreateScale(ballScale);
     m_world = m_world * scaleBall * positionBall;
 
     //setup and draw ball
     m_BallShader.EnableShader(context);
     m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
     m_ball.Render(context);
-	
-    ///APPLY PHYSICS TO BALL
-    DirectX::SimpleMath::Vector3 newPos;
-    DirectX::SimpleMath::Vector3 newVelocity;
 
-    newVelocity = ballMovement.CurrentVelocity;
+    //CUBE
+    m_world = SimpleMath::Matrix::Identity; //set world back to identity
+    SimpleMath::Matrix positionCube = SimpleMath::Matrix::CreateTranslation(cubePos);
+    SimpleMath::Matrix scaleCube = SimpleMath::Matrix::CreateScale(cubeScale);
+    m_world = m_world * scaleCube * positionCube ;
+
+    //setup and draw ball
+    m_BallShader.EnableShader(context);
+    m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
+    m_debugCube.Render(context);
 
 
 	//render our GUI
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	//ImGui::Render();
+	//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	
     
     // Show the new frame.
     m_deviceResources->Present();
 }
 
+bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
+{
+    bool collision = false;
+    Vector3 ballpos = ballMovement.CurrentPosiiton;
+    if ((ballpos.x / terrainScale >= 0) && (ballpos.x / terrainScale < terrainSide)
+        && (ballpos.z / terrainScale >= 0) && (ballpos.z / terrainScale < terrainSide))
+    {
+        //Get area to check
+        int lowerWidth = (int)((ballpos.x - ballScale * 10) / terrainScale);
+        int lowerHeight = (int)((ballpos.z - ballScale * 10) / terrainScale);
+        int upperWidth = (int)((ballpos.x + ballScale * 10) / terrainScale);
+        int upperHeight = (int)((ballpos.z + ballScale * 10) / terrainScale);
+        int k = int(ballpos.x / terrainScale);
+        int l = int(ballpos.z / terrainScale);
+        int indexpos = (terrainSide * l) + k;
+        cubeScale = (upperWidth - lowerWidth) * 10;
+
+
+
+        if (lowerWidth < 0)
+        {
+            lowerWidth = 0;
+        }
+        if (lowerHeight < 0)
+        {
+            lowerHeight = 0;
+        }
+        if (upperWidth > terrainSide - 1)
+        {
+            upperWidth = terrainSide - 1;
+        }
+        if (upperHeight > terrainSide - 1)
+        {
+            upperHeight = terrainSide - 1;
+        }
+
+		std::wstring printedMsg = std::to_wstring(lowerWidth);
+		const wchar_t* rochar = printedMsg.c_str();
+
+		// Draw Text to the screen
+		m_sprites->Begin();
+		m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 0), Colors::Yellow);
+		m_sprites->End();
+
+        printedMsg = std::to_wstring(lowerHeight);
+        rochar = printedMsg.c_str();
+
+        // Draw Text to the screen
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 500), Colors::Yellow);
+        m_sprites->End();
+
+        printedMsg = std::to_wstring(upperWidth);
+        rochar = printedMsg.c_str();
+
+        // Draw Text to the screen
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(200, 0), Colors::Yellow);
+        m_sprites->End();
+
+        printedMsg = std::to_wstring(upperHeight);
+        rochar = printedMsg.c_str();
+
+        //// Draw Text to the screen
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(200, 500), Colors::Yellow);
+        m_sprites->End();
+
+
+        for (int j = lowerHeight; j < upperHeight; j++)
+        {
+            for (int i = lowerWidth; i <= upperWidth; i++)
+            {
+                if (j + 1 < terrainSide && i + 1 < terrainSide)
+                {
+                    Vector3 CollisionPoint;
+                    int index = (terrainSide * j) + i;
+                    Vector3 A;
+                    A.x = m_Terrain.m_heightMap[index].x;
+                    A.y = m_Terrain.m_heightMap[index].y;
+                    A.z = m_Terrain.m_heightMap[index].z;
+
+                    index = (terrainSide * j) + i + 1;
+                    Vector3 B;
+                    B.x = m_Terrain.m_heightMap[index].x;
+                    B.y = m_Terrain.m_heightMap[index].y;
+                    B.z = m_Terrain.m_heightMap[index].z;
+
+                    index = (terrainSide * (j + 1)) + i;
+                    Vector3 C;
+                    C.x = m_Terrain.m_heightMap[index].x;
+                    C.y = m_Terrain.m_heightMap[index].y;
+                    C.z = m_Terrain.m_heightMap[index].z;
+                    return this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2, outCollisionPoint);
+                }
+            }
+        }
+    }
+    else
+    {
+        cubeScale = 200;
+        cubePos.x = 0;
+        cubePos.y = 0;
+        cubePos.z = 0;
+    }
+
+
+    return collision;
+}
+
+
+bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, float radius, Vector3 collisionPoint)
+{
+    Vector3 closestPoint = this->ClosestPoint(A, B, C, center);
+    cubePos.x = closestPoint.x;
+    cubePos.y = closestPoint.y ;
+    cubePos.z = closestPoint.z;
+    if (this->PointInTriangle(closestPoint, A, B, C))
+    {
+        float distance = (center - closestPoint).Length();
+        collisionPoint = closestPoint;
+        return distance < radius;
+    }
+    return false;
+}
+
+Vector3 Game::ClosestPoint(Vector3 A, Vector3 B, Vector3 C, Vector3 point)
+{
+    Vector3 AB = B - A;
+    Vector3 AC = C - A;
+    Vector3 normal;
+    AB.Cross(AC, normal);
+    //get unit normal
+    normal = normal / normal.Length();
+    float planeD = A.x * normal.x + A.y * normal.y + A.z * normal.z;
+    float distance = point.Dot(normal) - planeD;
+
+    return point - distance * normal;
+}
+
+bool Game::PointInTriangle(Vector3 point, Vector3 A, Vector3 B, Vector3 C)
+{
+
+
+    if ((point.x >= A.x && point.x <= B.x) && (point.z >= A.z && point.z <= C.z))
+    {
+        return true;
+    }
+    return false;
+}
 
 // Helper method to clear the back buffers.
 void Game::Clear()
@@ -428,7 +652,7 @@ void Game::CreateDeviceDependentResources()
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(context);
 
 	//setup our terrain
-	m_Terrain.Initialize(device, 128, 128);
+	m_Terrain.Initialize(device, terrainSide, terrainSide);
     m_terrainDisplacementX = *m_Terrain.GetAmplitude();
     m_terrainDisplacementY = *m_Terrain.GetWavelength();
 
@@ -439,6 +663,7 @@ void Game::CreateDeviceDependentResources()
 
 	//setup our test model
 	m_ball.InitializeSphere(device);
+    m_debugCube.InitializeBox(device,1 ,1 , 1);
 
 	//load and set up our Vertex and Pixel Shaders
     m_TerrainShader.InitStandard(device, L"terrain_light_vs.cso", L"terrain_light_ps.cso");
@@ -485,14 +710,14 @@ void Game::CreateWindowSizeDependentResources()
 void Game::SetupGUI()
 {
 
-	ImGui_ImplDX11_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
+	//ImGui_ImplDX11_NewFrame();
+	//ImGui_ImplWin32_NewFrame();
+	//ImGui::NewFrame();
 
-	ImGui::Begin("Sin Wave Parameters");
-		ImGui::SliderFloat("Wave Amplitude",	m_Terrain.GetAmplitude(), 0.0f, 10.0f);
-		ImGui::SliderFloat("Wavelength",		m_Terrain.GetWavelength(), 0.0f, 1.0f);
-	ImGui::End();
+	//ImGui::Begin("Sin Wave Parameters");
+	//	ImGui::SliderFloat("Wave Amplitude",	m_Terrain.GetAmplitude(), 0.0f, 10.0f);
+	//	ImGui::SliderFloat("Wavelength",		m_Terrain.GetWavelength(), 0.0f, 10.0f);
+	//ImGui::End();
 }
 
 

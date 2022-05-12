@@ -16,15 +16,15 @@ private:
 		DirectX::SimpleMath::Vector2 texture;
 		DirectX::SimpleMath::Vector3 normal;
 	};
+public:
+	Terrain();
+	~Terrain();
 	struct HeightMapType
 	{
 		float x, y, z;
 		float nx, ny, nz;
 		float u, v;
 	};
-public:
-	Terrain();
-	~Terrain();
 
 	struct VolcanoType
 	{
@@ -44,6 +44,7 @@ public:
 	float* GetAmplitude();
 	VolcanoType* GetVolcanoInfo();
 
+
 private:
 	bool CalculateNormals();
 	void Shutdown();
@@ -51,6 +52,7 @@ private:
 	bool InitializeBuffers(ID3D11Device*);
 	void RenderBuffers(ID3D11DeviceContext*);
 	
+public: HeightMapType* m_heightMap;
 
 private:
 	bool m_terrainGeneratedToggle;
@@ -58,7 +60,6 @@ private:
 	ID3D11Buffer * m_vertexBuffer, *m_indexBuffer;
 	int m_vertexCount, m_indexCount;
 	float m_frequency, m_amplitude, m_wavelength;
-	HeightMapType* m_heightMap;
 	float* m_randomMap;
 	VolcanoType VolcanoInfo;
 

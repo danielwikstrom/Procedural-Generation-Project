@@ -16,6 +16,9 @@ struct InputCommands
 	bool rotDown;
 	bool generate;
 	bool smooth;
+	bool launch;
+	bool isPressingLaunch = false;
+	bool launchButtonUp = false;
 };
 
 
@@ -29,7 +32,6 @@ public:
 	bool Quit();
 	InputCommands getGameInput();
 	bool pG = false;
-
 
 private:
 	bool m_quitApp;

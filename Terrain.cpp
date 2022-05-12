@@ -515,7 +515,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 			index = (m_terrainHeight * j) + i;
 
 			m_heightMap[index].x = (float)i;
-			float perlini = (i * perlinMultiplier + m_wavelength * 50);
+			float perlini = (i * perlinMultiplier + m_wavelength * 10);
 			float perlinj = (j * perlinMultiplier + m_amplitude * 10);
 			float perlinVal = noise.noise(perlinj, perlini, 0);
 			//perlinVal = abs(1-perlinVal) * 2 - 1;
@@ -543,6 +543,10 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 		return false;
 	}
 }
+
+
+
+
 
 DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ)
 {

@@ -70,6 +70,10 @@ private:
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
 	void SetupGUI();
+    bool CheckSphereCollision(DirectX::SimpleMath::Vector3 outCollisionPoint);
+    bool SphereWithTriangle(DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C, DirectX::SimpleMath::Vector3 center, float radius, DirectX::SimpleMath::Vector3 collisionPoint);
+    DirectX::SimpleMath::Vector3 ClosestPoint(DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C, DirectX::SimpleMath::Vector3 point);
+    bool PointInTriangle(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C);
 
     // Device resources.
     std::unique_ptr<DX::DeviceResources>    m_deviceResources;
@@ -117,6 +121,7 @@ private:
     Terrain::VolcanoType                                                    m_volcano;
 	Terrain																	m_Terrain;
 	ModelClass																m_ball;
+    ModelClass																m_debugCube;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
@@ -125,8 +130,21 @@ private:
 
     float                                                                   m_terrainDisplacementX;
     float                                                                   m_terrainDisplacementY;
+    float                                                                   terrainSide = 128;
+    float                                                                   terrainScale = 20;
 
     BallPhysics                                                             ballMovement;
+    float                                                                   LaunchForce;
+    float                                                                   MinLaunchForce = 10000;
+    float                                                                   MaxLaunchForce = 30000;
+    bool                                                                    isKinematic = false;
+    float                                                                   ballTimer;
+    float                                                                   ballMaxTime = 20;
+    float                                                                   ballScale = 20;
+
+
+    float                                                                   cubeScale;
+    DirectX::SimpleMath::Vector3                                            cubePos;
 	
 
 
