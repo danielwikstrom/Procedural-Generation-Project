@@ -440,65 +440,46 @@ bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
             upperHeight = terrainSide - 1;
         }
 
-		std::wstring printedMsg = std::to_wstring(lowerWidth);
-		const wchar_t* rochar = printedMsg.c_str();
 
-		// Draw Text to the screen
-		m_sprites->Begin();
-		m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 0), Colors::Yellow);
-		m_sprites->End();
 
-        printedMsg = std::to_wstring(lowerHeight);
-        rochar = printedMsg.c_str();
 
-        // Draw Text to the screen
-        m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 500), Colors::Yellow);
-        m_sprites->End();
 
-        printedMsg = std::to_wstring(upperWidth);
-        rochar = printedMsg.c_str();
-
-        // Draw Text to the screen
-        m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(200, 0), Colors::Yellow);
-        m_sprites->End();
-
-        printedMsg = std::to_wstring(upperHeight);
-        rochar = printedMsg.c_str();
-
-        //// Draw Text to the screen
-        m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(200, 500), Colors::Yellow);
-        m_sprites->End();
 
 
         for (int j = lowerHeight; j < upperHeight; j++)
         {
             for (int i = lowerWidth; i <= upperWidth; i++)
             {
-                if (j + 1 < terrainSide && i + 1 < terrainSide)
+                if (j + 1 < terrainSide && i + 1 < terrainSide && !collision)
                 {
                     Vector3 CollisionPoint;
                     int index = (terrainSide * j) + i;
                     Vector3 A;
-                    A.x = m_Terrain.m_heightMap[index].x;
-                    A.y = m_Terrain.m_heightMap[index].y;
-                    A.z = m_Terrain.m_heightMap[index].z;
+                    A.x = m_Terrain.m_heightMap[index].x * terrainScale;
+                    A.y = m_Terrain.m_heightMap[index].y * terrainScale;
+                    A.z = m_Terrain.m_heightMap[index].z * terrainScale;
 
                     index = (terrainSide * j) + i + 1;
                     Vector3 B;
-                    B.x = m_Terrain.m_heightMap[index].x;
-                    B.y = m_Terrain.m_heightMap[index].y;
-                    B.z = m_Terrain.m_heightMap[index].z;
+                    B.x = m_Terrain.m_heightMap[index].x * terrainScale;
+                    B.y = m_Terrain.m_heightMap[index].y * terrainScale;
+                    B.z = m_Terrain.m_heightMap[index].z * terrainScale;
 
                     index = (terrainSide * (j + 1)) + i;
                     Vector3 C;
-                    C.x = m_Terrain.m_heightMap[index].x;
-                    C.y = m_Terrain.m_heightMap[index].y;
-                    C.z = m_Terrain.m_heightMap[index].z;
-                    return this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2, outCollisionPoint);
+                    C.x = m_Terrain.m_heightMap[index].x * terrainScale;
+                    C.y = m_Terrain.m_heightMap[index].y * terrainScale;
+                    C.z = m_Terrain.m_heightMap[index].z * terrainScale;
+                    collision = this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2, outCollisionPoint);
+                    if (collision)
+                    {
+                        break;
+                    }
                 }
+            }
+            if (collision)
+            {
+                break;
             }
         }
     }
@@ -518,13 +499,14 @@ bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
 bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, float radius, Vector3 collisionPoint)
 {
     Vector3 closestPoint = this->ClosestPoint(A, B, C, center);
-    cubePos.x = closestPoint.x;
-    cubePos.y = closestPoint.y ;
-    cubePos.z = closestPoint.z;
+
+
+
     if (this->PointInTriangle(closestPoint, A, B, C))
     {
         float distance = (center - closestPoint).Length();
         collisionPoint = closestPoint;
+
         return distance < radius;
     }
     return false;
@@ -546,10 +528,9 @@ Vector3 Game::ClosestPoint(Vector3 A, Vector3 B, Vector3 C, Vector3 point)
 
 bool Game::PointInTriangle(Vector3 point, Vector3 A, Vector3 B, Vector3 C)
 {
-
-
     if ((point.x >= A.x && point.x <= B.x) && (point.z >= A.z && point.z <= C.z))
     {
+
         return true;
     }
     return false;
