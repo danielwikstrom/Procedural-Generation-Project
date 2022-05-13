@@ -27,6 +27,9 @@ void Input::Initialise(HWND window)
 	m_GameInput.rotDown = false;
 	m_GameInput.smooth = false;
 	m_GameInput.launch = false;
+	m_GameInput.prevMouseX = m_mouse->GetState().x;
+	m_GameInput.prevMouseX = m_mouse->GetState().y;
+
 }
 
 void Input::Update()
@@ -40,7 +43,6 @@ void Input::Update()
 	{
 		m_quitApp = true;
 	}
-
 	//A key
 	if (kb.A)	m_GameInput.left = true;
 	else		m_GameInput.left = false;
@@ -57,24 +59,24 @@ void Input::Update()
 	if (kb.S)	m_GameInput.back = true;
 	else		m_GameInput.back = false;
 
-	//A key
-	if (kb.Up)	m_GameInput.rotUp = true;
-	else		m_GameInput.rotUp = false;
 
-	//D key
-	if (kb.Down)	m_GameInput.rotDown = true;
-	else		m_GameInput.rotDown = false;
+	if (mouse.leftButton == true)
+	{
+	
+		m_GameInput.xAxis = m_GameInput.prevMouseX - mouse.x;
+		m_GameInput.yAxis = m_GameInput.prevMouseY - mouse.y;
+		m_GameInput.prevMouseX = mouse.x;
+		m_GameInput.prevMouseY = mouse.y;
+	}
+	else
+	{
+		m_GameInput.prevMouseX = mouse.x;
+		m_GameInput.prevMouseY = mouse.y;
+		m_GameInput.xAxis = m_GameInput.prevMouseX - mouse.x;
+		m_GameInput.yAxis = m_GameInput.prevMouseY - mouse.y;
+	}
 
-	//W key
-	if (kb.Left)	m_GameInput.rotLeft = true;
-	else		m_GameInput.rotLeft = false;
-
-	//S key
-	if (kb.Right)	m_GameInput.rotRight = true;
-	else		m_GameInput.rotRight = false;
-
-
-	if (!kb.Space && m_GameInput.isPressingLaunch)
+	if (!mouse.rightButton && m_GameInput.isPressingLaunch)
 	{
 		m_GameInput.launchButtonUp = true;
 	}
@@ -82,7 +84,7 @@ void Input::Update()
 	{
 		m_GameInput.launchButtonUp = false;
 	}
-	if (kb.Space)
+	if (mouse.rightButton)
 	{
 		m_GameInput.isPressingLaunch = true;
 	}

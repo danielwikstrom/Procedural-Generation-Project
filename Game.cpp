@@ -82,6 +82,8 @@ void Game::Initialize(HWND window, int width, int height)
     ballMovement.CurrentVelocity = Vector3(0, 0, 0);
     ballTimer = ballMaxTime;
     LaunchForce = MinLaunchForce;
+    collisionPoint = Vector3(0,0,0);
+    collisionNormal = Vector3(0, 0, 0);
 
     //m_volcano = Terrain::VolcanoType();
     //m_volcano.center = DirectX::SimpleMath::Vector2(0, 0);
@@ -175,33 +177,22 @@ void Game::Update(DX::StepTimer const& timer)
         position -= (m_Camera01.getRight() * movementSpeed); //add the forward vector
         m_Camera01.setPosition(position);
     }
-    if (m_gameInputCommands.rotLeft)
-    {
-        Vector3 rotation = m_Camera01.getRotation();
-        rotation.y = rotation.y += rotationSpeed;
-        m_Camera01.setRotation(rotation);
-    }
-    if (m_gameInputCommands.rotRight)
-    {
-        Vector3 rotation = m_Camera01.getRotation();
-        rotation.y = rotation.y -= rotationSpeed;
 
-        m_Camera01.setRotation(rotation);
-    }
-    if (m_gameInputCommands.rotUp)
+    if (m_gameInputCommands.xAxis != 0)
     {
         Vector3 rotation = m_Camera01.getRotation();
-        rotation.z = rotation.z -= rotationSpeed;
-        if (rotation.z <= 0.5f)
-            rotation.z = 0.5f;
+        rotation.y += rotationSpeed * m_gameInputCommands.xAxis;
         m_Camera01.setRotation(rotation);
     }
-    if (m_gameInputCommands.rotDown)
+    if (m_gameInputCommands.yAxis != 0)
     {
         Vector3 rotation = m_Camera01.getRotation();
-        rotation.z = rotation.z += rotationSpeed;
+        rotation.z -= rotationSpeed * m_gameInputCommands.yAxis;
         if (rotation.z >= 179.5f)
             rotation.z = 179.5f;
+        else if (rotation.z <= 0.5f)
+            rotation.z = 0.5f;
+
         m_Camera01.setRotation(rotation);
     }
 
@@ -357,21 +348,62 @@ void Game::Render()
             ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
             LaunchForce = MinLaunchForce;
         }
+        if (this->CheckSphereCollision())
+	    {
+		    float pointX = this->collisionPoint.x;
+		    float pointZ = this->collisionPoint.z;
+		    float distance = m_Terrain.DistanceBetween2DPoints(pointX, pointZ, m_volcano.center.x * terrainScale, m_volcano.center.y * terrainScale);
+
+
+            /// IF ball landed inside volcano
+		    if (distance <= (m_volcano.radius*terrainScale))
+		    {
+			    isKinematic = false;
+			    ballTimer = ballMaxTime;
+			    ballMovement.CurrentVelocity = Vector3(0, 0, 0);
+			    ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
+			    LaunchForce = MinLaunchForce;
+
+                Score++;
+                ///TODO: SCORE ON SCREEN, CHANGE LANDSCAPE
+
+
+                *m_Terrain.GetAmplitude() += 100;
+                *m_Terrain.GetAmplitude() += 100;
+
+                m_Terrain.GenerateHeightMap(m_deviceResources->GetD3DDevice());
+                m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+                m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+                m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
+
+		    }
+            // If ball lands elsewhere
+            else
+            {
+                float deltaTime = float(m_timer.GetElapsedSeconds());
+                DirectX::SimpleMath::Vector3 newPos;
+                DirectX::SimpleMath::Vector3 newVelocity;
+                DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
+                DirectX::SimpleMath::Vector3 acceleration = (gravity)+(m_Camera01.getForward() * LaunchForce);
+
+                newVelocity = ballMovement.CurrentVelocity.Length() * 0.3f * -this->collisionNormal + (acceleration * deltaTime);
+                newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
+                ballMovement.CurrentPosiiton = newPos;
+                ballMovement.CurrentVelocity = newVelocity;
+                ballTimer -= m_timer.GetElapsedSeconds();
+            }
+        }
 
 	}
     else
     {
         ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50 + m_Camera01.getUp() * -30;
     }
-    Vector3 collision;
-    if (this->CheckSphereCollision(collision))
-    {
-        isKinematic = false;
-        ballTimer = ballMaxTime;
-        ballMovement.CurrentVelocity = Vector3(0, 0, 0);
-        ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
-        LaunchForce = MinLaunchForce;
-    };
+
+
+
+
+
     //BALL
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
     SimpleMath::Matrix positionBall = SimpleMath::Matrix::CreateTranslation(ballMovement.CurrentPosiiton);
@@ -386,14 +418,31 @@ void Game::Render()
     //CUBE
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
     SimpleMath::Matrix positionCube = SimpleMath::Matrix::CreateTranslation(cubePos);
-    SimpleMath::Matrix scaleCube = SimpleMath::Matrix::CreateScale(cubeScale);
+    SimpleMath::Matrix scaleCube = SimpleMath::Matrix::CreateScale(1 * ballScale, 0.1 * ballScale, 1 * ballScale);
     m_world = m_world * scaleCube * positionCube ;
 
     //setup and draw ball
-    m_BallShader.EnableShader(context);
-    m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
+    m_shadowShader.EnableShader(context);
+    m_shadowShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
     m_debugCube.Render(context);
 
+
+
+    // Draw Text to the screen
+    std::wstring print = std::to_wstring(0);
+    const wchar_t* rochar = print.c_str();
+
+    m_sprites->Begin();
+    m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 0), Colors::Yellow);
+    m_sprites->End();
+
+    print = std::to_wstring(0);
+    rochar = print.c_str();
+
+    m_sprites->Begin();
+    m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(350, 0), Colors::Yellow);
+    m_sprites->End();
+    // Draw text
 
 	//render our GUI
 	//ImGui::Render();
@@ -404,7 +453,7 @@ void Game::Render()
     m_deviceResources->Present();
 }
 
-bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
+bool Game::CheckSphereCollision()
 {
     bool collision = false;
     Vector3 ballpos = ballMovement.CurrentPosiiton;
@@ -419,7 +468,9 @@ bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
         int k = int(ballpos.x / terrainScale);
         int l = int(ballpos.z / terrainScale);
         int indexpos = (terrainSide * l) + k;
-        cubeScale = (upperWidth - lowerWidth) * 10;
+        cubePos.x = ballpos.x;
+        cubePos.y = m_Terrain.m_heightMap[indexpos].y * terrainScale;
+        cubePos.z = ballpos.z;
 
 
 
@@ -470,7 +521,7 @@ bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
                     C.x = m_Terrain.m_heightMap[index].x * terrainScale;
                     C.y = m_Terrain.m_heightMap[index].y * terrainScale;
                     C.z = m_Terrain.m_heightMap[index].z * terrainScale;
-                    collision = this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2, outCollisionPoint);
+                    collision = this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2);
                     if (collision)
                     {
                         break;
@@ -496,7 +547,7 @@ bool Game::CheckSphereCollision(Vector3 outCollisionPoint)
 }
 
 
-bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, float radius, Vector3 collisionPoint)
+bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, float radius)
 {
     Vector3 closestPoint = this->ClosestPoint(A, B, C, center);
 
@@ -505,9 +556,21 @@ bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, f
     if (this->PointInTriangle(closestPoint, A, B, C))
     {
         float distance = (center - closestPoint).Length();
-        collisionPoint = closestPoint;
+        if (distance < radius)
+        {
+            this->collisionPoint = closestPoint;
 
-        return distance < radius;
+            Vector3 AB = B - A;
+            Vector3 AC = C - A;
+            AB.Cross(AC, this->collisionNormal);
+            this->collisionNormal = this->collisionNormal / this->collisionNormal.Length();
+            //get unit normal
+
+            return true;
+        }
+
+        
+
     }
     return false;
 }
@@ -644,11 +707,12 @@ void Game::CreateDeviceDependentResources()
 
 	//setup our test model
 	m_ball.InitializeSphere(device);
-    m_debugCube.InitializeBox(device,1 ,1 , 1);
+    m_debugCube.InitializeSphere(device);
 
 	//load and set up our Vertex and Pixel Shaders
     m_TerrainShader.InitStandard(device, L"terrain_light_vs.cso", L"terrain_light_ps.cso");
     m_BallShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_shadowShader.InitStandard(device, L"colour_vs.cso", L"colour_ps.cso");
 
 	//load Textures
 	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());

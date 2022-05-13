@@ -19,6 +19,11 @@ struct InputCommands
 	bool launch;
 	bool isPressingLaunch = false;
 	bool launchButtonUp = false;
+	float prevMouseX;
+	float prevMouseY;
+
+	float xAxis = 0;
+	float yAxis = 0;
 };
 
 

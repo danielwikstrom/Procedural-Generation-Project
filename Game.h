@@ -70,8 +70,8 @@ private:
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
 	void SetupGUI();
-    bool CheckSphereCollision(DirectX::SimpleMath::Vector3 outCollisionPoint);
-    bool SphereWithTriangle(DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C, DirectX::SimpleMath::Vector3 center, float radius, DirectX::SimpleMath::Vector3 collisionPoint);
+    bool CheckSphereCollision();
+    bool SphereWithTriangle(DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C, DirectX::SimpleMath::Vector3 center, float radius);
     DirectX::SimpleMath::Vector3 ClosestPoint(DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C, DirectX::SimpleMath::Vector3 point);
     bool PointInTriangle(DirectX::SimpleMath::Vector3 point, DirectX::SimpleMath::Vector3 A, DirectX::SimpleMath::Vector3 B, DirectX::SimpleMath::Vector3 C);
 
@@ -116,6 +116,7 @@ private:
 	//Shaders
     TerrainShader															m_TerrainShader;
     BasicShader															    m_BallShader;
+    BasicShader                                                             m_shadowShader;
 
 	//Scene. 
     Terrain::VolcanoType                                                    m_volcano;
@@ -139,8 +140,12 @@ private:
     float                                                                   MaxLaunchForce = 30000;
     bool                                                                    isKinematic = false;
     float                                                                   ballTimer;
-    float                                                                   ballMaxTime = 20;
+    float                                                                   ballMaxTime = 5;
     float                                                                   ballScale = 20;
+    DirectX::SimpleMath::Vector3                                            collisionPoint;
+    DirectX::SimpleMath::Vector3                                            collisionNormal;
+
+    int                                                                     Score = 0;
 
 
     float                                                                   cubeScale;
