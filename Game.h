@@ -146,6 +146,9 @@ private:
     DirectX::SimpleMath::Vector3                                            collisionNormal;
 
     int                                                                     Score = 0;
+    bool                                                                    IsChanging = false;
+    float                                                                   TimeToChange = 3;
+    float                                                                   Timer;
 
 
     float                                                                   cubeScale;

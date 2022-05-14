@@ -36,7 +36,9 @@ public:
 	void Render(ID3D11DeviceContext*);
 	bool SmoothHeightMap(ID3D11Device*);
 	bool GenerateHeightMap(ID3D11Device*);
-	void Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth, float mountainRadius, float mountainHeightMultiplier);
+	bool GetFinalHeightMap(ID3D11Device*, float displacement);
+	bool ChangeHeightMap(ID3D11Device*, float timeStep);
+	void Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth, float mountainRadius, float mountainHeightMultiplier, HeightMapType* map);
 	float DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y);
 	DirectX::SimpleMath::Vector2 GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ);
 	bool Update();
@@ -51,6 +53,7 @@ private:
 	void ShutdownBuffers();
 	bool InitializeBuffers(ID3D11Device*);
 	void RenderBuffers(ID3D11DeviceContext*);
+	float flerp(float a, float b, float t);
 	
 public: HeightMapType* m_heightMap;
 
@@ -62,6 +65,9 @@ private:
 	float m_frequency, m_amplitude, m_wavelength;
 	float* m_randomMap;
 	VolcanoType VolcanoInfo;
+	HeightMapType* m_heightMapToLerp;
+	HeightMapType* m_initMap;
+
 
 	//arrays for our generated objects Made by directX
 	std::vector<VertexPositionNormalTexture> preFabVertices;

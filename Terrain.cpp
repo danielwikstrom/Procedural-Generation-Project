@@ -32,6 +32,19 @@ bool Terrain::Initialize(ID3D11Device* device, int terrainWidth, int terrainHeig
 	{
 		return false;
 	}
+
+	m_heightMapToLerp = new HeightMapType[m_terrainWidth * m_terrainHeight];
+	if (!m_heightMapToLerp)
+	{
+		return false;
+	}
+
+	m_initMap = new HeightMapType[m_terrainWidth * m_terrainHeight];
+	if (!m_initMap)
+	{
+		return false;
+	}
+
 	m_randomMap = new float[m_terrainWidth * m_terrainHeight];
 
 	VolcanoInfo = VolcanoType();
@@ -496,7 +509,6 @@ bool Terrain::SmoothHeightMap(ID3D11Device* device)
 bool Terrain::GenerateHeightMap(ID3D11Device* device)
 {
 	PerlinNoise noise = PerlinNoise();
-	srand(static_cast <unsigned> (time(0)));
 	bool result;
 
 	int index;
@@ -529,7 +541,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 
 
 	// Volcano spawns only in interior 80% of the map
-	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2);
+	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2, m_heightMap);
 
 	result = CalculateNormals();
 	if (!result)
@@ -544,9 +556,93 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	}
 }
 
+bool Terrain::ChangeHeightMap(ID3D11Device* device, float timeStep)
+{
+	PerlinNoise noise = PerlinNoise();
+	srand(static_cast <unsigned> (time(0)));
+	bool result;
+
+	
+
+	int index;
+	float height = 0.0;
+
+	//float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
+	//m_randomMap = randomHeight;
+	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
+	//in this case I will run a sin-wave through the terrain in one axis.
+	float perlinMultiplier = 0.05;
+	float heightMultiplier = 30;
+	for (int j = 0; j < m_terrainHeight; j++)
+	{
+		for (int i = 0; i < m_terrainWidth; i++)
+		{
+			index = (m_terrainHeight * j) + i;
+			m_heightMap[index].y = flerp(m_initMap[index].y, m_heightMapToLerp[index].y, timeStep);
+		}
+	}
 
 
 
+	// Volcano spawns only in interior 80% of the map
+	//this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2);
+
+
+	result = CalculateNormals();
+	if (!result)
+	{
+		return false;
+	}
+
+	result = InitializeBuffers(device);
+	if (!result)
+	{
+		return false;
+	}
+}
+
+float Terrain::flerp(float a, float b, float t)
+{
+	return a + (b - a) * t; 
+}
+
+bool Terrain::GetFinalHeightMap(ID3D11Device*, float displacement)
+{
+	PerlinNoise noise = PerlinNoise();
+	bool result;
+
+
+	int index;
+	float height = 0.0;
+	float perlinMultiplier = 0.05;
+	float heightMultiplier = 30;
+
+	for (int j = 0; j < m_terrainHeight; j++)
+	{
+		for (int i = 0; i < m_terrainWidth; i++)
+		{
+			index = (m_terrainHeight * j) + i;
+
+			m_heightMapToLerp[index].x = (float)i;
+			float perlini = (i * perlinMultiplier + displacement * 10);
+			float perlinj = (j * perlinMultiplier + displacement * 10);
+			float perlinVal = noise.noise(perlinj, perlini, 0);
+			perlinVal *= heightMultiplier;
+			m_heightMapToLerp[index].y = perlinVal;
+			m_heightMapToLerp[index].z = (float)j;
+
+
+			m_initMap[index].x = m_heightMap[index].x;
+			m_initMap[index].y = m_heightMap[index].y;
+			m_initMap[index].z = m_heightMap[index].z;
+		}
+	}
+
+
+	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2, m_heightMapToLerp);
+
+	return false;
+}
 
 DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ)
 {
@@ -583,13 +679,13 @@ DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX,
 	return highestPeakPos;
 }
 
-void Terrain::Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth, float mountainRadius, float mountainHeightMultiplier)
+void Terrain::Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth, float mountainRadius, float mountainHeightMultiplier, HeightMapType* map)
 {
 	int centerIndex = (m_terrainHeight * center.y) + center.x;
-	float centerX = m_heightMap[centerIndex].x;
-	float centerZ = m_heightMap[centerIndex].z;
-	float maxDepth = (m_heightMap[centerIndex].y * mountainHeightMultiplier) - depth;
-	float maxHeight = m_heightMap[centerIndex].y * mountainHeightMultiplier;
+	float centerX = map[centerIndex].x;
+	float centerZ = map[centerIndex].z;
+	float maxDepth = (map[centerIndex].y * mountainHeightMultiplier) - depth;
+	float maxHeight = map[centerIndex].y * mountainHeightMultiplier;
 
 
 
@@ -599,18 +695,18 @@ void Terrain::Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float
 		{
 			
 			int index = (m_terrainHeight * j) + i;
-			float pointX = m_heightMap[index].x;
-			float pointZ = m_heightMap[index].z;
+			float pointX = map[index].x;
+			float pointZ = map[index].z;
 			float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
 			if (distance <= mountainRadius)
 			{
-				m_heightMap[index].y = maxHeight - (sqrt(distance / mountainRadius)) * (maxHeight - m_heightMap[index].y);
+				map[index].y = maxHeight - (sqrt(distance / mountainRadius)) * (maxHeight - map[index].y);
 				//m_heightMap[index].y = maxHeight - (pow(distance / mountainRadius, 2) * (maxHeight - m_heightMap[index].y));
 			}
 			if (distance <= radius)
 			{
 				//m_heightMap[index].y = maxDepth;
-				m_heightMap[index].y = maxDepth + (pow(distance/radius, 16)) * (m_heightMap[index].y - maxDepth);
+				map[index].y = maxDepth + (pow(distance/radius, 16)) * (map[index].y - maxDepth);
 			}
 			
 		}
@@ -619,51 +715,6 @@ void Terrain::Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float
 	VolcanoInfo.center = DirectX::SimpleMath::Vector2(centerX, centerZ);
 	VolcanoInfo.radius = radius;
 	VolcanoInfo.mountainRadius = mountainRadius;
-	 
-	//Smooth volcano
-	/*for (int smoothingRound = 0; smoothingRound < 0; smoothingRound++)
-	{
-		for (int j = 0; j < m_terrainHeight; j++)
-		{
-			for (int i = 0; i < m_terrainWidth; i++)
-			{
-				float value = 0.0f;
-				int numNeighbours = 0;
-				if (i > 0)
-				{
-					value += m_heightMap[j * m_terrainHeight + i - 1].y;
-					numNeighbours++;
-				}
-				if (i < m_terrainWidth - 1)
-				{
-					value += m_heightMap[j * m_terrainHeight + i + 1].y;
-					numNeighbours++;
-				}
-				if (j > 0)
-				{
-					value += m_heightMap[(j - 1) * m_terrainHeight + i].y;
-					numNeighbours++;
-				}
-				if (j < m_terrainHeight - 1)
-				{
-					value += m_heightMap[(j + 1) * m_terrainHeight + i].y;
-					numNeighbours++;
-				}
-				value /= numNeighbours;
-
-				int index = (m_terrainHeight * j) + i;
-				float pointX = m_heightMap[index].x;
-				float pointZ = m_heightMap[index].z;
-				float distance = this->DistanceBetween2DPoints(pointX, pointZ, centerX, centerZ);
-				if (distance <= radius)
-				{
-					m_heightMap[j * m_terrainHeight + i].y = value;
-				}
-
-			}
-		}
-	}*/
-
 }
 
 float Terrain::DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y)

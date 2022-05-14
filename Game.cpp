@@ -310,17 +310,7 @@ void Game::Render()
 	context->RSSetState(m_states->CullClockwise());
 	//context->RSSetState(m_states->Wireframe());
 
-	//prepare transform for floor object. 
-	m_world = SimpleMath::Matrix::Identity; //set world back to identity
-	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
-	SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(terrainScale);		//scale the terrain down a little. 
-	m_world = m_world * newScale *newPosition3;
 
-	//setup and draw terrain
-    m_TerrainShader.EnableShader(context);
-    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(),
-        m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
-	m_Terrain.Render(context);
 
 	
     ///APPLY PHYSICS TO BALL
@@ -368,14 +358,11 @@ void Game::Render()
                 ///TODO: SCORE ON SCREEN, CHANGE LANDSCAPE
 
 
-                *m_Terrain.GetAmplitude() += 100;
-                *m_Terrain.GetAmplitude() += 100;
+                IsChanging = true;
+                float random = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / 100));
+                m_Terrain.GetFinalHeightMap(m_deviceResources->GetD3DDevice(), random);
 
-                m_Terrain.GenerateHeightMap(m_deviceResources->GetD3DDevice());
-                m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
-                m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
-                m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
-
+                Timer = TimeToChange;
 		    }
             // If ball lands elsewhere
             else
@@ -400,9 +387,40 @@ void Game::Render()
         ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50 + m_Camera01.getUp() * -30;
     }
 
+    if (IsChanging && Timer >=0)
+    {
+        Timer -= m_timer.GetElapsedSeconds();
 
+        m_Terrain.ChangeHeightMap(m_deviceResources->GetD3DDevice(), (Timer - TimeToChange) / TimeToChange);
+        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
 
+        std::wstring print = std::to_wstring(m_Terrain.m_heightMap[9].y);
+        const wchar_t* rochar = print.c_str();
 
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 50), Colors::Yellow);
+        m_sprites->End();
+    }
+
+    if (Timer < 0)
+    {
+        Timer = TimeToChange;
+        IsChanging = false;
+    }
+
+    //prepare transform for floor object. 
+    m_world = SimpleMath::Matrix::Identity; //set world back to identity
+    SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
+    SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(terrainScale);		//scale the terrain down a little. 
+    m_world = m_world * newScale * newPosition3;
+
+    //setup and draw terrain
+    m_TerrainShader.EnableShader(context);
+    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(),
+        m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
+    m_Terrain.Render(context);
 
     //BALL
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
