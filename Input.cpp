@@ -27,6 +27,7 @@ void Input::Initialise(HWND window)
 	m_GameInput.rotDown = false;
 	m_GameInput.smooth = false;
 	m_GameInput.launch = false;
+	m_GameInput.Reset = false;
 	m_GameInput.prevMouseX = m_mouse->GetState().x;
 	m_GameInput.prevMouseX = m_mouse->GetState().y;
 
@@ -58,6 +59,10 @@ void Input::Update()
 	//S key
 	if (kb.S)	m_GameInput.back = true;
 	else		m_GameInput.back = false;
+
+	//Enter key
+	if (kb.Enter)	m_GameInput.Reset = true;
+	else		m_GameInput.Reset = false;
 
 
 	if (mouse.leftButton == true)

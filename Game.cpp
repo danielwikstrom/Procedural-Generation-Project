@@ -47,15 +47,21 @@ void Game::Initialize(HWND window, int width, int height)
     m_deviceResources->CreateWindowSizeDependentResources();
     CreateWindowSizeDependentResources();
 
+
+    postProcess = std::make_unique<BasicPostProcess>(m_deviceResources->GetD3DDevice());
+    dualPostProcess = std::make_unique<DualPostProcess>(m_deviceResources->GetD3DDevice());
+
 	//setup imgui.  its up here cos we need the window handle too
 	//pulled from imgui directx11 example
-	//IMGUI_CHECKVERSION();
-	//ImGui::CreateContext();
-	//ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	//ImGui::StyleColorsDark();
-	//ImGui_ImplWin32_Init(window);		//tie to our window
-	//ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());	//tie to directx
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	ImGui::StyleColorsDark();
+	ImGui_ImplWin32_Init(window);		//tie to our window
+	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());	//tie to directx
+    ForcePtr = new float;
+    *ForcePtr = 0;
 
 	m_fullscreenRect.left = 0;
 	m_fullscreenRect.top = 0;
@@ -68,8 +74,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_CameraViewRect.bottom = 240;
 
 	//setup light
-	m_Light.setAmbientColour(0.3f, 0.3f, 0.3f, 1.0f);
-	m_Light.setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
+	m_Light.setAmbientColour(0.59f, 0.687f, 0.72f, 1.0f);
+	m_Light.setDiffuseColour(0.8f, 0.8f, 0.8f, 1.0f);
 	m_Light.setPosition(2.0f, 1.0f, 1.0f);
 	m_Light.setDirection(-1.0f, -1.0f, 0.0f);
 
@@ -82,6 +88,7 @@ void Game::Initialize(HWND window, int width, int height)
     ballMovement.CurrentVelocity = Vector3(0, 0, 0);
     ballTimer = ballMaxTime;
     LaunchForce = MinLaunchForce;
+    *ForcePtr = 0;
     collisionPoint = Vector3(0,0,0);
     collisionNormal = Vector3(0, 0, 0);
 
@@ -196,29 +203,40 @@ void Game::Update(DX::StepTimer const& timer)
         m_Camera01.setRotation(rotation);
     }
 
-	if (m_gameInputCommands.generate)
-	{
-		m_Terrain.GenerateHeightMap(device);
-        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
-        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
-        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
-	}
-    if (!isKinematic)
+    if (m_gameInputCommands.Reset && GameFinished)
+    {
+        GameFinished = false;
+        Score = 0;
+        Rounds = 1;
+    }
+
+	//if (m_gameInputCommands.generate)
+	//{
+	//	m_Terrain.GenerateHeightMap(device);
+ //       m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+ //       m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+ //       m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
+	//}
+    if (!isKinematic && !IsChanging && !GameFinished)
     {
         if (m_gameInputCommands.isPressingLaunch)
         {
             if (LaunchForce <= MaxLaunchForce)
             {
-                LaunchForce += m_timer.GetElapsedSeconds() * ((MaxLaunchForce - MinLaunchForce)/2);
+                LaunchForce += m_timer.GetElapsedSeconds() * ((MaxLaunchForce - MinLaunchForce));
+                *ForcePtr = (LaunchForce - MinLaunchForce) / (MaxLaunchForce - MinLaunchForce);
             }
             else
             {
                 LaunchForce = MaxLaunchForce;
+                *ForcePtr = (LaunchForce - MinLaunchForce) / (MaxLaunchForce - MinLaunchForce);
             }
         }
         if (m_gameInputCommands.launchButtonUp)
         {
             isKinematic = true;
+
+            ThrowPos = m_Camera01.getPosition();
         }
     }
 
@@ -227,20 +245,8 @@ void Game::Update(DX::StepTimer const& timer)
         LaunchForce = 0;
     }
 
-    if (m_gameInputCommands.smooth)
-    {
-        m_Terrain.SmoothHeightMap(device);
-    }
 
-    if (m_terrainDisplacementX != *m_Terrain.GetAmplitude() || m_terrainDisplacementY != *m_Terrain.GetWavelength())
-    {
-        m_terrainDisplacementX = *m_Terrain.GetAmplitude();
-        m_terrainDisplacementY = *m_Terrain.GetWavelength();
-        m_Terrain.GenerateHeightMap(device);
-        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
-        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
-        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
-    }
+
 
 	m_Camera01.Update();	//camera update.
 	m_Terrain.Update();		//terrain update.  doesnt do anything at the moment. 
@@ -310,7 +316,8 @@ void Game::Render()
 	context->RSSetState(m_states->CullClockwise());
 	//context->RSSetState(m_states->Wireframe());
 
-
+    m_PostProcessRenderPass->setRenderTarget(context);
+    m_PostProcessRenderPass->clearRenderTarget(context, 1, 1, 1, 1);
 
 	
     ///APPLY PHYSICS TO BALL
@@ -322,7 +329,7 @@ void Game::Render()
 			DirectX::SimpleMath::Vector3 newPos;
 			DirectX::SimpleMath::Vector3 newVelocity;
 			DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
-			DirectX::SimpleMath::Vector3 acceleration = (gravity)+(m_Camera01.getForward() * LaunchForce);
+			DirectX::SimpleMath::Vector3 acceleration = (gravity)+((m_Camera01.getForward() + m_Camera01.getUp())* LaunchForce);
 
 			newVelocity = ballMovement.CurrentVelocity + (acceleration * deltaTime);
 			newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
@@ -337,6 +344,7 @@ void Game::Render()
             ballMovement.CurrentVelocity = Vector3(0, 0, 0);
             ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
             LaunchForce = MinLaunchForce;
+            *ForcePtr = 0;
         }
         if (this->CheckSphereCollision())
 	    {
@@ -353,8 +361,11 @@ void Game::Render()
 			    ballMovement.CurrentVelocity = Vector3(0, 0, 0);
 			    ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50;
 			    LaunchForce = MinLaunchForce;
+                *ForcePtr = 0;
 
-                Score++;
+                float throwScore = (ThrowPos - this->collisionPoint).Length()/10;
+
+                Score += throwScore;
                 ///TODO: SCORE ON SCREEN, CHANGE LANDSCAPE
 
 
@@ -362,7 +373,19 @@ void Game::Render()
                 float random = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / 100));
                 m_Terrain.GetFinalHeightMap(m_deviceResources->GetD3DDevice(), random);
 
+
+                cubePos.x = 0;
+                cubePos.y = -100;
+                cubePos.z = 0;
+
                 Timer = TimeToChange;
+
+                Rounds++;
+
+                if (Rounds > MaxRounds)
+                {
+                    GameFinished = true;
+                }
 		    }
             // If ball lands elsewhere
             else
@@ -373,11 +396,12 @@ void Game::Render()
                 DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
                 DirectX::SimpleMath::Vector3 acceleration = (gravity)+(m_Camera01.getForward() * LaunchForce);
 
-                newVelocity = ballMovement.CurrentVelocity.Length() * 0.3f * -this->collisionNormal + (acceleration * deltaTime);
+                newVelocity = ballMovement.CurrentVelocity.Length() * 0.6f * -this->collisionNormal + (acceleration * deltaTime);
                 newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
                 ballMovement.CurrentPosiiton = newPos;
                 ballMovement.CurrentVelocity = newVelocity;
                 ballTimer -= m_timer.GetElapsedSeconds();
+                Timer -= 3;
             }
         }
 
@@ -390,24 +414,23 @@ void Game::Render()
     if (IsChanging && Timer >=0)
     {
         Timer -= m_timer.GetElapsedSeconds();
+        float timestep = (TimeToChange - Timer) / TimeToChange;
+        //timestep = floor(timestep * 10) / 10;
+        m_Terrain.ChangeHeightMap(m_deviceResources->GetD3DDevice(), timestep);
 
-        m_Terrain.ChangeHeightMap(m_deviceResources->GetD3DDevice(), (Timer - TimeToChange) / TimeToChange);
         m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
-        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
-        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
 
-        std::wstring print = std::to_wstring(m_Terrain.m_heightMap[9].y);
-        const wchar_t* rochar = print.c_str();
 
-        m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 50), Colors::Yellow);
-        m_sprites->End();
     }
 
     if (Timer < 0)
     {
         Timer = TimeToChange;
         IsChanging = false;
+
+        m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
+        m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
+        m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
     }
 
     //prepare transform for floor object. 
@@ -433,40 +456,86 @@ void Game::Render()
     m_BallShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
     m_ball.Render(context);
 
-    //CUBE
+    //Ball shadow
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
     SimpleMath::Matrix positionCube = SimpleMath::Matrix::CreateTranslation(cubePos);
     SimpleMath::Matrix scaleCube = SimpleMath::Matrix::CreateScale(1 * ballScale, 0.1 * ballScale, 1 * ballScale);
     m_world = m_world * scaleCube * positionCube ;
 
-    //setup and draw ball
-    m_shadowShader.EnableShader(context);
-    m_shadowShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureBall.Get());
+    //setup and draw ball shadow
+    m_colorShader.EnableShader(context);
+    m_colorShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureShadow.Get());
     m_debugCube.Render(context);
 
+    //Skybox
+    context->RSSetState(m_states->CullCounterClockwise());
+    m_world = SimpleMath::Matrix::Identity; //set world back to identity
+    SimpleMath::Matrix positionSkybox = SimpleMath::Matrix::CreateTranslation((terrainScale * terrainSide)/2,0, (terrainScale * terrainSide) / 2);
+    SimpleMath::Matrix scaleSkybox = SimpleMath::Matrix::CreateScale(10000);
+    m_world = m_world * scaleSkybox * positionSkybox;
 
+    //setup and draw skybox
+    m_colorShader.EnableShader(context);
+    m_colorShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_textureSkybox.Get());
+    m_debugCube.Render(context);
 
-    // Draw Text to the screen
-    std::wstring print = std::to_wstring(0);
-    const wchar_t* rochar = print.c_str();
+    context->RSSetState(m_states->CullClockwise());
 
-    m_sprites->Begin();
-    m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(10, 0), Colors::Yellow);
-    m_sprites->End();
+    if (!GameFinished)
+    {
+        auto size = m_deviceResources->GetOutputSize();
+        const wchar_t* ScoreText;
+        std::wstring s = L"SCORE: " + std::to_wstring(Score);
+        ScoreText = s.c_str();
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right * 0.1, size.bottom * 0.1), Colors::White);
+        m_sprites->End();
 
-    print = std::to_wstring(0);
-    rochar = print.c_str();
+        const wchar_t* RoundsText;
+        std::wstring r = L"Round: " + std::to_wstring(Rounds);
+        RoundsText = r.c_str();
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), RoundsText, XMFLOAT2(size.right * 0.8, size.bottom * 0.1), Colors::White);
+        m_sprites->End();
+    }
 
-    m_sprites->Begin();
-    m_font->DrawString(m_sprites.get(), rochar, XMFLOAT2(350, 0), Colors::Yellow);
-    m_sprites->End();
+    else
+    {
+        const wchar_t* ScoreText;
+        std::wstring s = L"FINAL SCORE: " + std::to_wstring(Score);
+        ScoreText = s.c_str();
+        m_sprites->Begin();
+        auto size = m_deviceResources->GetOutputSize();
+        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right/3, size.bottom/2), Colors::White);
+        m_sprites->End();
+
+        const wchar_t* FinalText;
+        std::wstring f = L"Press Enter to play again";
+        FinalText = f.c_str();
+        m_sprites->Begin();
+        m_font->DrawString(m_sprites.get(), FinalText, XMFLOAT2(size.right / 3, size.bottom / 2 + size.bottom * 0.3), Colors::White);
+        m_sprites->End();
+    }
+
     // Draw text
 
 	//render our GUI
-	//ImGui::Render();
-	//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 	
-    
+    context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
+    dualPostProcess->SetEffect(DualPostProcess::BloomCombine);
+    dualPostProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
+
+    postProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
+    postProcess->SetEffect(BasicPostProcess::BloomExtract);
+    postProcess->SetBloomExtractParameter(1.0);
+    postProcess->Process(context);
+
+    dualPostProcess->SetSourceTexture2(m_PostProcessRenderPass->getShaderResourceView());
+    dualPostProcess->SetBloomCombineParameters(2, 1, 1, 1);
+    dualPostProcess->Process(context);
+
     // Show the new frame.
     m_deviceResources->Present();
 }
@@ -730,7 +799,7 @@ void Game::CreateDeviceDependentResources()
 	//load and set up our Vertex and Pixel Shaders
     m_TerrainShader.InitStandard(device, L"terrain_light_vs.cso", L"terrain_light_ps.cso");
     m_BallShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
-    m_shadowShader.InitStandard(device, L"colour_vs.cso", L"colour_ps.cso");
+    m_colorShader.InitStandard(device, L"colour_vs.cso", L"colour_ps.cso");
 
 	//load Textures
 	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
@@ -741,9 +810,9 @@ void Game::CreateDeviceDependentResources()
     CreateDDSTextureFromFile(device, L"textures/grass.dds", nullptr, m_textureGrass.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/sand.dds", nullptr, m_textureSand.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/bball.dds", nullptr,m_textureBall.ReleaseAndGetAddressOf());
-
-	//Initialise Render to texture
-	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 
+    CreateDDSTextureFromFile(device, L"textures/skybox.dds", nullptr, m_textureSkybox.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/black.dds", nullptr, m_textureShadow.ReleaseAndGetAddressOf());
+ 
 
 }
 
@@ -768,19 +837,22 @@ void Game::CreateWindowSizeDependentResources()
         0.01f,
         10000.0f
     );
+
+
+    //Initialise Render to texture
+    m_PostProcessRenderPass = new RenderTexture(m_deviceResources->GetD3DDevice(), size.right, size.bottom, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same.
 }
 
 void Game::SetupGUI()
 {
 
-	//ImGui_ImplDX11_NewFrame();
-	//ImGui_ImplWin32_NewFrame();
-	//ImGui::NewFrame();
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
 
-	//ImGui::Begin("Sin Wave Parameters");
-	//	ImGui::SliderFloat("Wave Amplitude",	m_Terrain.GetAmplitude(), 0.0f, 10.0f);
-	//	ImGui::SliderFloat("Wavelength",		m_Terrain.GetWavelength(), 0.0f, 10.0f);
-	//ImGui::End();
+	ImGui::Begin("Throw Force");
+		ImGui::SliderFloat("",	ForcePtr, 0.0, 1.0);
+	ImGui::End();
 }
 
 

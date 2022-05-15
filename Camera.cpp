@@ -56,6 +56,7 @@ void Camera::Update()
 
 
 	m_forward.Cross(m_right, m_up);
+	m_up = -m_up;
 
 	//update lookat point
 	m_lookat = m_position + m_forward;

@@ -127,9 +127,11 @@ bool BasicShader::SetShaderParameters(ID3D11DeviceContext* context, DirectX::Sim
 	context->Unmap(m_lightBuffer, 0);
 	context->PSSetConstantBuffers(0, 1, &m_lightBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
 
-
-	//pass the desired texture to the pixel shader.
-	context->PSSetShaderResources(0, 1, &texture1);
+	if (texture1 != NULL)
+	{
+		//pass the desired texture to the pixel shader.
+		context->PSSetShaderResources(0, 1, &texture1);
+	}
 
 
 	return false;

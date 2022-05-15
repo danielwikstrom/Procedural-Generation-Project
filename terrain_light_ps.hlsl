@@ -32,6 +32,7 @@ struct InputType
 	float3 position3D : TEXCOORD2;
 };
 
+
 int fastFloor(float x)
 {
 	return x > 0 ? (int)x : (int)x - 1;
@@ -183,8 +184,8 @@ float4 main(InputType input) : SV_TARGET
 
 	
 
-	float minY = -200.5;
-	float maxY = 200;
+	float minY = -300.5;
+	float maxY = 300;
 
 	float minX = 0;
 	float maxX = 2560;

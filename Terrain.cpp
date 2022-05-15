@@ -541,7 +541,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 
 
 	// Volcano spawns only in interior 80% of the map
-	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2, m_heightMap);
+	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8, m_heightMap), volcanoRadius, volcanoDepth, volcanoMountainRadius, volcanHeightMultiplier, m_heightMap);
 
 	result = CalculateNormals();
 	if (!result)
@@ -567,6 +567,9 @@ bool Terrain::ChangeHeightMap(ID3D11Device* device, float timeStep)
 	int index;
 	float height = 0.0;
 
+	if (timeStep >= 0.99f)
+		timeStep = 1;
+
 	//float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
 	//m_randomMap = randomHeight;
 	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
@@ -582,7 +585,10 @@ bool Terrain::ChangeHeightMap(ID3D11Device* device, float timeStep)
 		}
 	}
 
+	VolcanoInfo.center.x = flerp(startVolcanoCenter.x, goalVolcanoCenter.x, timeStep);
+	VolcanoInfo.center.y = flerp(startVolcanoCenter.y, goalVolcanoCenter.y, timeStep);
 
+	
 
 	// Volcano spawns only in interior 80% of the map
 	//this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2);
@@ -638,13 +644,15 @@ bool Terrain::GetFinalHeightMap(ID3D11Device*, float displacement)
 		}
 	}
 
+	startVolcanoCenter = VolcanoInfo.center;
+	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8, m_heightMapToLerp), volcanoRadius, volcanoDepth, volcanoMountainRadius, volcanHeightMultiplier, m_heightMapToLerp);
 
-	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2, m_heightMapToLerp);
+	goalVolcanoCenter = VolcanoInfo.center;
 
 	return false;
 }
 
-DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ)
+DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ, HeightMapType* map)
 {
 	DirectX::SimpleMath::Vector2 highestPeakPos;
 
@@ -658,12 +666,12 @@ DirectX::SimpleMath::Vector2 Terrain::GetHighestPeak(int startPosX, int endPosX,
 		for (int i = startPosZ; i < endPosZ; i++)
 		{
 			index = (m_terrainHeight * j) + i;
-			float height = m_heightMap[index].y;
+			float height = map[index].y;
 			//Check surrounding peaks
-			if ((height > m_heightMap[(m_terrainHeight * j) + i + 1].y)
-				&& (height > m_heightMap[(m_terrainHeight * j) + i - 1].y)
-				&& (height > m_heightMap[(m_terrainHeight * (j + 1)) + i].y)
-				&& (height > m_heightMap[(m_terrainHeight * (j - 1)) + i].y)
+			if ((height > map[(m_terrainHeight * j) + i + 1].y)
+				&& (height > map[(m_terrainHeight * j) + i - 1].y)
+				&& (height > map[(m_terrainHeight * (j + 1)) + i].y)
+				&& (height > map[(m_terrainHeight * (j - 1)) + i].y)
 				&& height > heighestPointHeight)
 			{
 				heighestPointHeight = height;

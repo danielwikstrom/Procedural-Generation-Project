@@ -281,26 +281,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_ACTIVATEAPP:
-        if (game)
-        {
-			SetWindowLongPtr(hWnd, GWL_STYLE, 0);
-                SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_TOPMOST);
+  //      if (game)
+  //      {
+		//	SetWindowLongPtr(hWnd, GWL_STYLE, 0);
+  //              SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_TOPMOST);
 
-                SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  //              SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
-                ShowWindow(hWnd, SW_SHOWMAXIMIZED);
-            if (wParam)
-            {
-                game->OnActivated();
+  //              ShowWindow(hWnd, SW_SHOWNORMAL);
+  //          if (wParam)
+  //          {
+  //              game->OnActivated();
 
-            }
-            else
-            {
-                game->OnDeactivated();
-            }
-        }
-		Keyboard::ProcessMessage(message, wParam, lParam);
-		Mouse::ProcessMessage(message, wParam, lParam);
+  //          }
+  //          else
+  //          {
+  //              game->OnDeactivated();
+  //          }
+  //      }
+		//Keyboard::ProcessMessage(message, wParam, lParam);
+		//Mouse::ProcessMessage(message, wParam, lParam);
         break;
 
     case WM_POWERBROADCAST:
