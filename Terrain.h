@@ -40,7 +40,7 @@ public:
 	bool ChangeHeightMap(ID3D11Device*, float timeStep);
 	void Volcanize(DirectX::SimpleMath::Vector2 center, float radius, float depth, float mountainRadius, float mountainHeightMultiplier, HeightMapType* map);
 	float DistanceBetween2DPoints(float p1X, float p1Y, float p2X, float p2Y);
-	DirectX::SimpleMath::Vector2 GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ);
+	DirectX::SimpleMath::Vector2 GetHighestPeak(int startPosX, int endPosX, int startPosZ, int endPosZ, HeightMapType* map);
 	bool Update();
 	float* GetWavelength();
 	float* GetAmplitude();
@@ -67,6 +67,14 @@ private:
 	VolcanoType VolcanoInfo;
 	HeightMapType* m_heightMapToLerp;
 	HeightMapType* m_initMap;
+
+	const float volcanoRadius = 4;
+	const float volcanoDepth = 11;
+	const float volcanoMountainRadius = 20;
+	const float volcanHeightMultiplier = 1.5f;
+
+	DirectX::SimpleMath::Vector2 goalVolcanoCenter;
+	DirectX::SimpleMath::Vector2 startVolcanoCenter;
 
 
 	//arrays for our generated objects Made by directX

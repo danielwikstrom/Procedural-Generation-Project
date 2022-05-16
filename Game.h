@@ -13,6 +13,7 @@
 #include "Camera.h"
 #include "RenderTexture.h"
 #include "Terrain.h"
+#include "PostProcess.h"
 
 
 // A basic game implementation that creates a D3D11 device and
@@ -66,6 +67,8 @@ private:
 
     void Update(DX::StepTimer const& timer);
     void Render();
+    void RenderSceneToTexture(RenderTexture* rt);
+    void SetBloomPostProcess(float intensity, float cutoff);
     void Clear();
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
@@ -112,11 +115,13 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureGrass;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureSand;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureBall;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureSkybox;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_textureShadow;
 
 	//Shaders
     TerrainShader															m_TerrainShader;
     BasicShader															    m_BallShader;
-    BasicShader                                                             m_shadowShader;
+    BasicShader                                                             m_colorShader;
 
 	//Scene. 
     Terrain::VolcanoType                                                    m_volcano;
@@ -125,7 +130,9 @@ private:
     ModelClass																m_debugCube;
 
 	//RenderTextures
-	RenderTexture*															m_FirstRenderPass;
+    RenderTexture*                                                          m_NormalRenderPass;
+	RenderTexture*															m_PostProcessRenderPass;
+    RenderTexture*                                                          m_PostProcessRenderPass2;
 	RECT																	m_fullscreenRect;
 	RECT																	m_CameraViewRect;
 
@@ -136,24 +143,45 @@ private:
 
     BallPhysics                                                             ballMovement;
     float                                                                   LaunchForce;
-    float                                                                   MinLaunchForce = 10000;
-    float                                                                   MaxLaunchForce = 30000;
+    float*                                                                  ForcePtr;
+    float                                                                   MinLaunchForce = 2000;
+    float                                                                   MaxLaunchForce = 15000;
     bool                                                                    isKinematic = false;
     float                                                                   ballTimer;
-    float                                                                   ballMaxTime = 5;
+    float                                                                   ballMaxTime = 8;
     float                                                                   ballScale = 20;
     DirectX::SimpleMath::Vector3                                            collisionPoint;
     DirectX::SimpleMath::Vector3                                            collisionNormal;
+    DirectX::SimpleMath::Vector3                                            ThrowPos;
 
     int                                                                     Score = 0;
     bool                                                                    IsChanging = false;
     float                                                                   TimeToChange = 3;
     float                                                                   Timer;
+    int                                                                     Rounds = 1;
+    int                                                                     MaxRounds = 5;
+    bool                                                                    GameFinished = false;
+    bool*                                                                   Bloom;
+    float                                                                   debugFloat;
 
 
     float                                                                   cubeScale;
     DirectX::SimpleMath::Vector3                                            cubePos;
 	
+
+    std::unique_ptr<BasicPostProcess>                                       postProcess;
+    std::unique_ptr<DualPostProcess>                                        dualPostProcess;
+
+    std::unique_ptr<DirectX::AudioEngine>                                   m_audEngine;
+
+    std::unique_ptr<DirectX::SoundEffect> m_bounce;
+    std::unique_ptr<DirectX::SoundEffect> m_score;
+    std::unique_ptr<DirectX::SoundEffect> m_throw;
+    std::unique_ptr<DirectX::SoundEffect> m_background;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_bounceInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_scoreInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_throwInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_backgroundInstance;
 
 
 #ifdef DXTK_AUDIO
