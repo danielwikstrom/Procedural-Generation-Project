@@ -25,12 +25,10 @@ Game::Game() noexcept(false)
 
 Game::~Game()
 {
-#ifdef DXTK_AUDIO
     if (m_audEngine)
     {
         m_audEngine->Suspend();
     }
-#endif
 }
 
 // Initialize the Direct3D resources required to run.
@@ -62,6 +60,9 @@ void Game::Initialize(HWND window, int width, int height)
 	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());	//tie to directx
     ForcePtr = new float;
     *ForcePtr = 0;
+
+    Bloom = new bool;
+    *Bloom = false;
 
 	m_fullscreenRect.left = 0;
 	m_fullscreenRect.top = 0;
@@ -96,7 +97,6 @@ void Game::Initialize(HWND window, int width, int height)
     //m_volcano.center = DirectX::SimpleMath::Vector2(0, 0);
     //m_volcano.radius = 10;
 	
-#ifdef DXTK_AUDIO
     // Create DirectXTK for Audio objects
     AUDIO_ENGINE_FLAGS eflags = AudioEngine_Default;
 #ifdef _DEBUG
@@ -105,19 +105,18 @@ void Game::Initialize(HWND window, int width, int height)
 
     m_audEngine = std::make_unique<AudioEngine>(eflags);
 
-    m_audioEvent = 0;
-    m_audioTimerAcc = 10.f;
-    m_retryDefault = false;
 
-    m_waveBank = std::make_unique<WaveBank>(m_audEngine.get(), L"adpcmdroid.xwb");
 
-    m_soundEffect = std::make_unique<SoundEffect>(m_audEngine.get(), L"MusicMono_adpcm.wav");
-    m_effect1 = m_soundEffect->CreateInstance();
-    m_effect2 = m_waveBank->CreateInstance(10);
+    m_bounce = std::make_unique<SoundEffect>(m_audEngine.get(), L"sounds/bounce.wav");
+    m_bounceInstance = m_bounce->CreateInstance();
+    m_throw = std::make_unique<SoundEffect>(m_audEngine.get(), L"sounds/swoosh.wav");
+    m_throwInstance = m_throw->CreateInstance();
+    m_score = std::make_unique<SoundEffect>(m_audEngine.get(), L"sounds/cheer.wav");
+    m_scoreInstance = m_score->CreateInstance();
+    m_background = std::make_unique<SoundEffect>(m_audEngine.get(), L"sounds/background.wav");
+    m_backgroundInstance = m_background->CreateInstance();
+    m_backgroundInstance->Play();
 
-    m_effect1->Play(true);
-    m_effect2->Play();
-#endif
 }
 
 #pragma region Frame Update
@@ -221,7 +220,7 @@ void Game::Update(DX::StepTimer const& timer)
     {
         if (m_gameInputCommands.isPressingLaunch)
         {
-            if (LaunchForce <= MaxLaunchForce)
+            if (LaunchForce < MaxLaunchForce)
             {
                 LaunchForce += m_timer.GetElapsedSeconds() * ((MaxLaunchForce - MinLaunchForce));
                 *ForcePtr = (LaunchForce - MinLaunchForce) / (MaxLaunchForce - MinLaunchForce);
@@ -229,14 +228,18 @@ void Game::Update(DX::StepTimer const& timer)
             else
             {
                 LaunchForce = MaxLaunchForce;
-                *ForcePtr = (LaunchForce - MinLaunchForce) / (MaxLaunchForce - MinLaunchForce);
+                *ForcePtr = 1;
             }
         }
         if (m_gameInputCommands.launchButtonUp)
         {
             isKinematic = true;
 
+
+
             ThrowPos = m_Camera01.getPosition();
+
+            m_throw->Play(0.5f, 0.5f, 0.5f);
         }
     }
 
@@ -309,15 +312,15 @@ void Game::Render()
 
     // Draw Text to the screen
 
+    //Set Rendering states. 
+    context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(m_states->DepthDefault(), 0);
+    context->RSSetState(m_states->CullClockwise());
+    //context->RSSetState(m_states->Wireframe());
 
-	//Set Rendering states. 
-	context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
-	context->OMSetDepthStencilState(m_states->DepthDefault(), 0);
-	context->RSSetState(m_states->CullClockwise());
-	//context->RSSetState(m_states->Wireframe());
 
-    m_PostProcessRenderPass->setRenderTarget(context);
-    m_PostProcessRenderPass->clearRenderTarget(context, 1, 1, 1, 1);
+
+
 
 	
     ///APPLY PHYSICS TO BALL
@@ -329,10 +332,10 @@ void Game::Render()
 			DirectX::SimpleMath::Vector3 newPos;
 			DirectX::SimpleMath::Vector3 newVelocity;
 			DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
-			DirectX::SimpleMath::Vector3 acceleration = (gravity)+((m_Camera01.getForward() + m_Camera01.getUp())* LaunchForce);
+			DirectX::SimpleMath::Vector3 acceleration = (gravity)+((m_Camera01.getForward() + m_Camera01.getUp())* LaunchForce * (1/(deltaTime * 60)));
 
 			newVelocity = ballMovement.CurrentVelocity + (acceleration * deltaTime);
-			newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
+			newPos = ballMovement.CurrentPosiiton + (newVelocity  * deltaTime);
 			ballMovement.CurrentPosiiton = newPos;
 			ballMovement.CurrentVelocity = newVelocity;
             ballTimer -= m_timer.GetElapsedSeconds();
@@ -382,6 +385,7 @@ void Game::Render()
 
                 Rounds++;
 
+                m_score->Play(0.3f, 0.5f, 0.5f);
                 if (Rounds > MaxRounds)
                 {
                     GameFinished = true;
@@ -394,7 +398,7 @@ void Game::Render()
                 DirectX::SimpleMath::Vector3 newPos;
                 DirectX::SimpleMath::Vector3 newVelocity;
                 DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
-                DirectX::SimpleMath::Vector3 acceleration = (gravity)+(m_Camera01.getForward() * LaunchForce);
+                DirectX::SimpleMath::Vector3 acceleration = gravity;
 
                 newVelocity = ballMovement.CurrentVelocity.Length() * 0.6f * -this->collisionNormal + (acceleration * deltaTime);
                 newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
@@ -402,6 +406,15 @@ void Game::Render()
                 ballMovement.CurrentVelocity = newVelocity;
                 ballTimer -= m_timer.GetElapsedSeconds();
                 Timer -= 3;
+
+                float vol;
+                float distance = (m_Camera01.getPosition() - this->collisionPoint).Length();
+                vol = 1 - ((distance - 100) / (2000 - 100));
+                if (vol < 0.1f)
+                    vol = 0.1;
+                if (vol > 1.0f)
+                    vol = 1.0f;
+                m_bounce->Play(vol, 0.5f, 0.5f);
             }
         }
 
@@ -432,6 +445,14 @@ void Game::Render()
         m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
         m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
     }
+
+
+    if (*Bloom)
+    {
+        m_NormalRenderPass->setRenderTarget(context);
+        m_NormalRenderPass->clearRenderTarget(context, 0, 0, 0, 1);
+    }
+
 
     //prepare transform for floor object. 
     m_world = SimpleMath::Matrix::Identity; //set world back to identity
@@ -481,6 +502,16 @@ void Game::Render()
 
     context->RSSetState(m_states->CullClockwise());
 
+
+    context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+
+    if (*Bloom)
+    {
+        this->SetBloomPostProcess(1.25, 1);
+    }
+   
+
+
     if (!GameFinished)
     {
         auto size = m_deviceResources->GetOutputSize();
@@ -488,15 +519,19 @@ void Game::Render()
         std::wstring s = L"SCORE: " + std::to_wstring(Score);
         ScoreText = s.c_str();
         m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right * 0.1, size.bottom * 0.1), Colors::White);
+        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right * 0.1, size.bottom * 0.1), Colors::Black);
         m_sprites->End();
 
         const wchar_t* RoundsText;
         std::wstring r = L"Round: " + std::to_wstring(Rounds);
         RoundsText = r.c_str();
         m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), RoundsText, XMFLOAT2(size.right * 0.8, size.bottom * 0.1), Colors::White);
+        m_font->DrawString(m_sprites.get(), RoundsText, XMFLOAT2(size.right * 0.8, size.bottom * 0.1), Colors::Black);
         m_sprites->End();
+
+
+
+
     }
 
     else
@@ -506,38 +541,112 @@ void Game::Render()
         ScoreText = s.c_str();
         m_sprites->Begin();
         auto size = m_deviceResources->GetOutputSize();
-        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right/3, size.bottom/2), Colors::White);
+        m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right / 3, size.bottom / 2), Colors::Black);
         m_sprites->End();
 
         const wchar_t* FinalText;
         std::wstring f = L"Press Enter to play again";
         FinalText = f.c_str();
         m_sprites->Begin();
-        m_font->DrawString(m_sprites.get(), FinalText, XMFLOAT2(size.right / 3, size.bottom / 2 + size.bottom * 0.3), Colors::White);
+        m_font->DrawString(m_sprites.get(), FinalText, XMFLOAT2(size.right / 3, size.bottom / 2 + size.bottom * 0.3), Colors::Black);
         m_sprites->End();
     }
 
-    // Draw text
 
 	//render our GUI
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-	
+
+
     context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
-    dualPostProcess->SetEffect(DualPostProcess::BloomCombine);
-    dualPostProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
-
-    postProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
-    postProcess->SetEffect(BasicPostProcess::BloomExtract);
-    postProcess->SetBloomExtractParameter(1.0);
-    postProcess->Process(context);
-
-    dualPostProcess->SetSourceTexture2(m_PostProcessRenderPass->getShaderResourceView());
-    dualPostProcess->SetBloomCombineParameters(2, 1, 1, 1);
-    dualPostProcess->Process(context);
 
     // Show the new frame.
     m_deviceResources->Present();
+}
+
+void Game::SetBloomPostProcess(float intensity, float cutoff)
+{
+    auto context = m_deviceResources->GetD3DDeviceContext();
+
+
+    auto renderTargetView = m_deviceResources->GetRenderTargetView();
+    auto depthTargetView = m_deviceResources->GetDepthStencilView();
+
+    this->RenderSceneToTexture(m_PostProcessRenderPass);
+    this->RenderSceneToTexture(m_PostProcessRenderPass2);
+
+    postProcess->SetEffect(BasicPostProcess::BloomExtract);
+    postProcess->SetBloomExtractParameter(cutoff);
+    m_PostProcessRenderPass->setRenderTarget(context);
+
+    postProcess->SetSourceTexture(m_NormalRenderPass->getShaderResourceView());
+    postProcess->Process(context);
+
+
+
+    postProcess->SetEffect(BasicPostProcess::BloomBlur);
+    postProcess->SetBloomBlurParameters(true, 4.f, 1.25f);
+    m_PostProcessRenderPass2->setRenderTarget(context);
+
+    postProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
+    postProcess->Process(context);
+
+    // Pass 3 (blur2 -> blur1)
+    postProcess->SetBloomBlurParameters(false, 4.f, 1.25f);
+
+    ID3D11ShaderResourceView* nullsrv[] = { nullptr, nullptr };
+    context->PSSetShaderResources(0, 2, nullsrv);
+
+    m_PostProcessRenderPass->setRenderTarget(context);
+
+    postProcess->SetSourceTexture(m_PostProcessRenderPass2->getShaderResourceView());
+    postProcess->Process(context);
+
+
+    dualPostProcess->SetEffect(DualPostProcess::BloomCombine);
+    dualPostProcess->SetBloomCombineParameters(intensity, 1.f, 1.f, 1.f);
+    context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+
+    dualPostProcess->SetSourceTexture(m_NormalRenderPass->getShaderResourceView());
+    dualPostProcess->SetSourceTexture2(m_PostProcessRenderPass->getShaderResourceView());
+    dualPostProcess->Process(context);
+}
+
+void Game::RenderSceneToTexture(RenderTexture* rt)
+{
+    auto context = m_deviceResources->GetD3DDeviceContext();
+
+    rt->setRenderTarget(context);
+    rt->clearRenderTarget(context, 0, 0, 0, 1);
+
+    auto renderTargetView = m_deviceResources->GetRenderTargetView();
+    auto depthTargetView = m_deviceResources->GetDepthStencilView();
+
+
+    //Set Rendering states. 
+    context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(m_states->DepthDefault(), 0);
+    context->RSSetState(m_states->CullClockwise());
+    //context->RSSetState(m_states->Wireframe());
+
+    //prepare transform for floor object. 
+    m_world = SimpleMath::Matrix::Identity; //set world back to identity
+    SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
+    SimpleMath::Matrix newScale = SimpleMath::Matrix::CreateScale(terrainScale);		//scale the terrain down a little. 
+    m_world = m_world * newScale * newPosition3;
+
+    //setup and draw terrain
+    m_TerrainShader.EnableShader(context);
+    m_TerrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(),
+        m_volcano, m_textureSand.Get(), m_textureGrass.Get(), m_textureDirt.Get(), m_textureRock.Get(), m_textureSnow.Get());
+    m_Terrain.Render(context);
+
+    
+
+    context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+
+
+
 }
 
 bool Game::CheckSphereCollision()
@@ -721,18 +830,14 @@ void Game::OnDeactivated()
 
 void Game::OnSuspending()
 {
-#ifdef DXTK_AUDIO
     m_audEngine->Suspend();
-#endif
 }
 
 void Game::OnResuming()
 {
     m_timer.ResetElapsedTime();
 
-#ifdef DXTK_AUDIO
     m_audEngine->Resume();
-#endif
 }
 
 void Game::OnWindowMoved()
@@ -840,7 +945,9 @@ void Game::CreateWindowSizeDependentResources()
 
 
     //Initialise Render to texture
-    m_PostProcessRenderPass = new RenderTexture(m_deviceResources->GetD3DDevice(), size.right, size.bottom, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same.
+    m_NormalRenderPass = new RenderTexture(m_deviceResources->GetD3DDevice(), size.right, size.bottom, 1, 2);
+    m_PostProcessRenderPass = new RenderTexture(m_deviceResources->GetD3DDevice(), size.right, size.bottom, 1, 2);
+    m_PostProcessRenderPass2 = new RenderTexture(m_deviceResources->GetD3DDevice(), size.right, size.bottom, 1, 2);
 }
 
 void Game::SetupGUI()
@@ -850,8 +957,9 @@ void Game::SetupGUI()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::Begin("Throw Force");
-		ImGui::SliderFloat("",	ForcePtr, 0.0, 1.0);
+	ImGui::Begin("Debug");
+		ImGui::SliderFloat("Throw Force",	ForcePtr, 0.0, 1.0);
+        ImGui::Checkbox("Bloom", Bloom);
 	ImGui::End();
 }
 

@@ -67,6 +67,8 @@ private:
 
     void Update(DX::StepTimer const& timer);
     void Render();
+    void RenderSceneToTexture(RenderTexture* rt);
+    void SetBloomPostProcess(float intensity, float cutoff);
     void Clear();
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
@@ -128,6 +130,7 @@ private:
     ModelClass																m_debugCube;
 
 	//RenderTextures
+    RenderTexture*                                                          m_NormalRenderPass;
 	RenderTexture*															m_PostProcessRenderPass;
     RenderTexture*                                                          m_PostProcessRenderPass2;
 	RECT																	m_fullscreenRect;
@@ -141,7 +144,7 @@ private:
     BallPhysics                                                             ballMovement;
     float                                                                   LaunchForce;
     float*                                                                  ForcePtr;
-    float                                                                   MinLaunchForce = 5000;
+    float                                                                   MinLaunchForce = 2500;
     float                                                                   MaxLaunchForce = 25000;
     bool                                                                    isKinematic = false;
     float                                                                   ballTimer;
@@ -158,6 +161,8 @@ private:
     int                                                                     Rounds = 1;
     int                                                                     MaxRounds = 5;
     bool                                                                    GameFinished = false;
+    bool*                                                                   Bloom;
+    float                                                                   debugFloat;
 
 
     float                                                                   cubeScale;
@@ -166,6 +171,17 @@ private:
 
     std::unique_ptr<BasicPostProcess>                                       postProcess;
     std::unique_ptr<DualPostProcess>                                        dualPostProcess;
+
+    std::unique_ptr<DirectX::AudioEngine>                                   m_audEngine;
+
+    std::unique_ptr<DirectX::SoundEffect> m_bounce;
+    std::unique_ptr<DirectX::SoundEffect> m_score;
+    std::unique_ptr<DirectX::SoundEffect> m_throw;
+    std::unique_ptr<DirectX::SoundEffect> m_background;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_bounceInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_scoreInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_throwInstance;
+    std::unique_ptr<DirectX::SoundEffectInstance> m_backgroundInstance;
 
 
 #ifdef DXTK_AUDIO

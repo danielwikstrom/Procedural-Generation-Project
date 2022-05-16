@@ -17,8 +17,7 @@ struct InputType
 float4 main(InputType input) : SV_TARGET
 {
 	float2 uv = input.tex;
-	uv *= 1;
-	float4 tex = shaderTexture.Sample(SampleType, uv) * 1;
+	float4 tex = shaderTexture.Sample(SampleType, uv);
 	float4 color = float4(1.0, 1.0, 1.0, 1.0) * tex;
 
 
