@@ -67,6 +67,10 @@ private:
 
     void Update(DX::StepTimer const& timer);
     void Render();
+    /// <summary>
+    /// Do a render pass to a render texture of the scene. In this case the only rendered object is the terrain
+    /// </summary>
+    /// <param name="rt"></param>
     void RenderSceneToTexture(RenderTexture* rt);
     void SetBloomPostProcess(float intensity, float cutoff);
     void Clear();
@@ -148,7 +152,7 @@ private:
     float                                                                   MaxLaunchForce = 25000;
     bool                                                                    isKinematic = false;
     float                                                                   ballTimer;
-    float                                                                   ballMaxTime = 8;
+    float                                                                   ballMaxTime = 7;
     float                                                                   ballScale = 20;
     DirectX::SimpleMath::Vector3                                            collisionPoint;
     DirectX::SimpleMath::Vector3                                            collisionNormal;

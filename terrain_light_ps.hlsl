@@ -168,38 +168,42 @@ float4 main(InputType input) : SV_TARGET
 	// Sample the pixel color from the texture using the sampler at this texture coordinate location.
 	// textureColor = shaderTexture.Sample(SampleType, input.tex);
 
-	float4 SandColor = terrainTexture1.Sample(SampleType, input.tex);
 	float4 GrassColor = terrainTexture2.Sample(SampleType, input.tex * 0.3f);
 	float4 DirtColor = terrainTexture3.Sample(SampleType, input.tex * 3);
 	float4 RockColor = terrainTexture4.Sample(SampleType, input.tex * 3);
 	float4 SnowColor = terrainTexture5.Sample(SampleType, input.tex * 4);
 	float4 LavaColour1 = float4(1.0, 0.1, 0.1, 1.0) ;
 	float4 LavaColour2 = float4(1.0, 0.6, 0.1, 1.0) ;
-	//float4 SnowColor = float4(1.0, 1.0, 1.0, 1.0);
-	//float4 RockColor = float4(0.5, 0.5, 0.5, 1.0);
-	//float4 DirtColor = float4(0.5, 0.25, 0.0, 1.0);
-	//float4 SandColor = float4(0.9, 0.7, 0.2, 1.0);
-	//float4 GrassColor = float4(0.2, 0.5, 0.1, 1.0);
+
+	//Array with textures. Grass and snow textures are twice to have more of them in the terrain
 	float4 heightColors[] = {GrassColor, GrassColor,DirtColor, RockColor, SnowColor, SnowColor};
 
 	
-
+	//MIn and max values of the terrain to normalize the height
 	float minY = -300.5;
 	float maxY = 300;
 
-	float minX = 0;
-	float maxX = 2560;
+
 	float normalizedHeight = saturate(floor(input.position3D.y - minY) / (maxY - minY));
 
-
-	float perlin = perlinNoise(input.position3D.x * 0.05f , 0, input.position3D.z * 0.05f );
+	//Get perlin value
+	float perlin = perlinNoise(input.position3D.x * 0.02f , 0, input.position3D.z * 0.02f );
+	//Combine height with perlin
 	float perlinHeight = saturate(normalizedHeight + (perlin*0.04));
+
+	//Get index of first colour to lerp
 	float colToUse = floor(perlinHeight * 5);
+
+	//Get index of colour to lerp to
 	float colToLerp = colToUse + 1;
 	colToLerp = clamp(colToLerp, 0, 4);
+
+	//Get a lerping value between 0 and 1 according to the height
 	float lerpingValue = (perlinHeight * 5) - colToUse;
 
+	//Optional if we want the heights not to be blended
 	lerpingValue = ceil(lerpingValue * 1)/1;
+
 	float4 finalColor = lerp(heightColors[colToUse], heightColors[colToLerp], lerpingValue);
 
 	// Paint volcano with different texture
@@ -210,12 +214,20 @@ float4 main(InputType input) : SV_TARGET
 	float frq = 0.001;
 	float amp = 20;
 	float speed = 0.1f;
+	//Get perlin with movement in the y coord
 	float lavaPerlin = perlinNoise(input.position3D.x * 0.03f, time * speed, input.position3D.z * 0.03f);
+
+	//give perlin output rounded shapes with same function used for water waves
 	float lavaFunction = sin(input.position3D.x * frq * (lavaPerlin)) * amp * lavaPerlin + sin(input.position3D.z * frq * (lavaPerlin)) * 2 * amp * lavaPerlin;
 	lavaFunction *= 0.1;
 
+	//Get lava colour with the 2 colours combines with the rounded perlin values
 	float4 LavaLerped = lerp(LavaColour2, LavaColour1, lavaFunction) * 2;
+
+	//set lava function to be either 0 or 1
 	float lavaLerp = saturate(ceil(1 - lavaFunction));
+
+	//Lava does not get mul;tiplied by current color value, so light doesnt affect it
 	float4 LavaColourFinal = lerp(RockColor * 0.1, LavaLerped, lavaLerp);
 	finalColor = lerp(LavaColourFinal, finalColor, IsLava(pos));
 

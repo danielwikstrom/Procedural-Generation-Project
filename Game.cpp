@@ -209,17 +209,12 @@ void Game::Update(DX::StepTimer const& timer)
         Rounds = 1;
     }
 
-	//if (m_gameInputCommands.generate)
-	//{
-	//	m_Terrain.GenerateHeightMap(device);
- //       m_volcano.center = m_Terrain.GetVolcanoInfo()->center;
- //       m_volcano.radius = m_Terrain.GetVolcanoInfo()->radius;
- //       m_volcano.mountainRadius = m_Terrain.GetVolcanoInfo()->mountainRadius;
-	//}
+    //If we have a ball and game is still going
     if (!isKinematic && !IsChanging && !GameFinished)
     {
         if (m_gameInputCommands.isPressingLaunch)
         {
+            //caclulate force to throw ball
             if (LaunchForce < MaxLaunchForce)
             {
                 LaunchForce += m_timer.GetElapsedSeconds() * ((MaxLaunchForce - MinLaunchForce));
@@ -231,6 +226,7 @@ void Game::Update(DX::StepTimer const& timer)
                 *ForcePtr = 1;
             }
         }
+        /// throw ball
         if (m_gameInputCommands.launchButtonUp)
         {
             isKinematic = true;
@@ -245,6 +241,7 @@ void Game::Update(DX::StepTimer const& timer)
 
     else
     {
+        //Launch force set to 0 after throwing the ball
         LaunchForce = 0;
     }
 
@@ -326,6 +323,7 @@ void Game::Render()
     ///APPLY PHYSICS TO BALL
 	if (isKinematic)
 	{
+        //If ball is still moving
 		if (ballTimer > 0)
 		{
 			float deltaTime = float(m_timer.GetElapsedSeconds());
@@ -340,6 +338,7 @@ void Game::Render()
 			ballMovement.CurrentVelocity = newVelocity;
             ballTimer -= m_timer.GetElapsedSeconds();
 		}
+        //return ball back to player
         else
         {
             isKinematic = false;
@@ -349,6 +348,7 @@ void Game::Render()
             LaunchForce = MinLaunchForce;
             *ForcePtr = 0;
         }
+        //If there is collision
         if (this->CheckSphereCollision())
 	    {
 		    float pointX = this->collisionPoint.x;
@@ -359,6 +359,7 @@ void Game::Render()
             /// IF ball landed inside volcano
 		    if (distance <= (m_volcano.radius*terrainScale))
 		    {
+                //give ball back to player
 			    isKinematic = false;
 			    ballTimer = ballMaxTime;
 			    ballMovement.CurrentVelocity = Vector3(0, 0, 0);
@@ -366,17 +367,16 @@ void Game::Render()
 			    LaunchForce = MinLaunchForce;
                 *ForcePtr = 0;
 
+                //calculate score based on distance
                 float throwScore = (ThrowPos - this->collisionPoint).Length()/10;
-
                 Score += throwScore;
-                ///TODO: SCORE ON SCREEN, CHANGE LANDSCAPE
 
-
+                // change terrain
                 IsChanging = true;
                 float random = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / 100));
                 m_Terrain.GetFinalHeightMap(m_deviceResources->GetD3DDevice(), random);
 
-
+                //hide ball "shadow"
                 cubePos.x = 0;
                 cubePos.y = -100;
                 cubePos.z = 0;
@@ -400,6 +400,7 @@ void Game::Render()
                 DirectX::SimpleMath::Vector3 gravity = DirectX::SimpleMath::Vector3(0, -9.81, 0) * 20;
                 DirectX::SimpleMath::Vector3 acceleration = gravity;
 
+                //Bounce in the direction of the normal with less speed
                 newVelocity = ballMovement.CurrentVelocity.Length() * 0.6f * -this->collisionNormal + (acceleration * deltaTime);
                 newPos = ballMovement.CurrentPosiiton + (newVelocity * deltaTime);
                 ballMovement.CurrentPosiiton = newPos;
@@ -407,6 +408,7 @@ void Game::Render()
                 ballTimer -= m_timer.GetElapsedSeconds();
                 Timer -= 3;
 
+                //Calculate volume of bounce sound based on distance to camera
                 float vol;
                 float distance = (m_Camera01.getPosition() - this->collisionPoint).Length();
                 vol = 1 - ((distance - 100) / (2000 - 100));
@@ -421,9 +423,11 @@ void Game::Render()
 	}
     else
     {
+        //Give ball to player if ball is not kinematic
         ballMovement.CurrentPosiiton = m_Camera01.getPosition() + m_Camera01.getForward() * 50 + m_Camera01.getUp() * -30;
     }
 
+    //Lerp terrain
     if (IsChanging && Timer >=0)
     {
         Timer -= m_timer.GetElapsedSeconds();
@@ -449,6 +453,7 @@ void Game::Render()
 
     if (*Bloom)
     {
+        //Do a render pass into a render texture for post processing
         m_NormalRenderPass->setRenderTarget(context);
         m_NormalRenderPass->clearRenderTarget(context, 0, 0, 0, 1);
     }
@@ -507,6 +512,7 @@ void Game::Render()
 
     if (*Bloom)
     {
+        //apply bloom to scene
         this->SetBloomPostProcess(1.25, 1);
     }
    
@@ -514,6 +520,7 @@ void Game::Render()
 
     if (!GameFinished)
     {
+        // show current score
         auto size = m_deviceResources->GetOutputSize();
         const wchar_t* ScoreText;
         std::wstring s = L"SCORE: " + std::to_wstring(Score);
@@ -522,20 +529,18 @@ void Game::Render()
         m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right * 0.1, size.bottom * 0.1), Colors::Black);
         m_sprites->End();
 
+        //show current round
         const wchar_t* RoundsText;
         std::wstring r = L"Round: " + std::to_wstring(Rounds);
         RoundsText = r.c_str();
         m_sprites->Begin();
         m_font->DrawString(m_sprites.get(), RoundsText, XMFLOAT2(size.right * 0.8, size.bottom * 0.1), Colors::Black);
         m_sprites->End();
-
-
-
-
     }
 
     else
     {
+        //show final score
         const wchar_t* ScoreText;
         std::wstring s = L"FINAL SCORE: " + std::to_wstring(Score);
         ScoreText = s.c_str();
@@ -544,6 +549,7 @@ void Game::Render()
         m_font->DrawString(m_sprites.get(), ScoreText, XMFLOAT2(size.right / 3, size.bottom / 2), Colors::Black);
         m_sprites->End();
 
+        //show play again text
         const wchar_t* FinalText;
         std::wstring f = L"Press Enter to play again";
         FinalText = f.c_str();
@@ -572,9 +578,11 @@ void Game::SetBloomPostProcess(float intensity, float cutoff)
     auto renderTargetView = m_deviceResources->GetRenderTargetView();
     auto depthTargetView = m_deviceResources->GetDepthStencilView();
 
+    //Do two extra render passes for the blur and bloom render textures
     this->RenderSceneToTexture(m_PostProcessRenderPass);
     this->RenderSceneToTexture(m_PostProcessRenderPass2);
 
+    // Get bloom extract texture
     postProcess->SetEffect(BasicPostProcess::BloomExtract);
     postProcess->SetBloomExtractParameter(cutoff);
     m_PostProcessRenderPass->setRenderTarget(context);
@@ -583,7 +591,7 @@ void Game::SetBloomPostProcess(float intensity, float cutoff)
     postProcess->Process(context);
 
 
-
+    //Get horizontal blur texture from the bloom texture
     postProcess->SetEffect(BasicPostProcess::BloomBlur);
     postProcess->SetBloomBlurParameters(true, 4.f, 1.25f);
     m_PostProcessRenderPass2->setRenderTarget(context);
@@ -591,7 +599,7 @@ void Game::SetBloomPostProcess(float intensity, float cutoff)
     postProcess->SetSourceTexture(m_PostProcessRenderPass->getShaderResourceView());
     postProcess->Process(context);
 
-    // Pass 3 (blur2 -> blur1)
+    // get vertical blur texture from the bloom texture)
     postProcess->SetBloomBlurParameters(false, 4.f, 1.25f);
 
     ID3D11ShaderResourceView* nullsrv[] = { nullptr, nullptr };
@@ -602,7 +610,7 @@ void Game::SetBloomPostProcess(float intensity, float cutoff)
     postProcess->SetSourceTexture(m_PostProcessRenderPass2->getShaderResourceView());
     postProcess->Process(context);
 
-
+    //Combine bloom blur texture with the normal scene render
     dualPostProcess->SetEffect(DualPostProcess::BloomCombine);
     dualPostProcess->SetBloomCombineParameters(intensity, 1.f, 1.f, 1.f);
     context->OMSetRenderTargets(1, &renderTargetView, nullptr);
@@ -611,6 +619,7 @@ void Game::SetBloomPostProcess(float intensity, float cutoff)
     dualPostProcess->SetSourceTexture2(m_PostProcessRenderPass->getShaderResourceView());
     dualPostProcess->Process(context);
 }
+
 
 void Game::RenderSceneToTexture(RenderTexture* rt)
 {
@@ -653,23 +662,26 @@ bool Game::CheckSphereCollision()
 {
     bool collision = false;
     Vector3 ballpos = ballMovement.CurrentPosiiton;
+    //if ball is within terrain
     if ((ballpos.x / terrainScale >= 0) && (ballpos.x / terrainScale < terrainSide)
         && (ballpos.z / terrainScale >= 0) && (ballpos.z / terrainScale < terrainSide))
     {
-        //Get area to check
-        int lowerWidth = (int)((ballpos.x - ballScale * 10) / terrainScale);
-        int lowerHeight = (int)((ballpos.z - ballScale * 10) / terrainScale);
-        int upperWidth = (int)((ballpos.x + ballScale * 10) / terrainScale);
-        int upperHeight = (int)((ballpos.z + ballScale * 10) / terrainScale);
+        //Get limits of the grid to check
+        int lowerWidth = (int)((ballpos.x - ballScale) / terrainScale);
+        int lowerHeight = (int)((ballpos.z - ballScale) / terrainScale);
+        int upperWidth = (int)((ballpos.x + ballScale) / terrainScale);
+        int upperHeight = (int)((ballpos.z + ballScale) / terrainScale);
         int k = int(ballpos.x / terrainScale);
         int l = int(ballpos.z / terrainScale);
         int indexpos = (terrainSide * l) + k;
+
+        //Set position of debug shadow
         cubePos.x = ballpos.x;
         cubePos.y = m_Terrain.m_heightMap[indexpos].y * terrainScale;
         cubePos.z = ballpos.z;
 
 
-
+        //Check if limits are in terrain
         if (lowerWidth < 0)
         {
             lowerWidth = 0;
@@ -699,6 +711,7 @@ bool Game::CheckSphereCollision()
             {
                 if (j + 1 < terrainSide && i + 1 < terrainSide && !collision)
                 {
+                    //Get triangle points
                     Vector3 CollisionPoint;
                     int index = (terrainSide * j) + i;
                     Vector3 A;
@@ -717,9 +730,11 @@ bool Game::CheckSphereCollision()
                     C.x = m_Terrain.m_heightMap[index].x * terrainScale;
                     C.y = m_Terrain.m_heightMap[index].y * terrainScale;
                     C.z = m_Terrain.m_heightMap[index].z * terrainScale;
+                    //Check if collision with triangle
                     collision = this->SphereWithTriangle(A, B, C, ballMovement.CurrentPosiiton, ballScale / 2);
                     if (collision)
                     {
+                        //Stop checking for other triangles
                         break;
                     }
                 }
@@ -732,7 +747,7 @@ bool Game::CheckSphereCollision()
     }
     else
     {
-        cubeScale = 200;
+        cubeScale = 0;
         cubePos.x = 0;
         cubePos.y = 0;
         cubePos.z = 0;
@@ -745,12 +760,14 @@ bool Game::CheckSphereCollision()
 
 bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, float radius)
 {
+    //Get closest point in p[lane formed by AB and AC
     Vector3 closestPoint = this->ClosestPoint(A, B, C, center);
 
 
-
+    //Check if point is within the triangle
     if (this->PointInTriangle(closestPoint, A, B, C))
     {
+        //check if distance to point is lower than sphere radius
         float distance = (center - closestPoint).Length();
         if (distance < radius)
         {
@@ -773,6 +790,7 @@ bool Game::SphereWithTriangle(Vector3 A, Vector3 B, Vector3 C, Vector3 center, f
 
 Vector3 Game::ClosestPoint(Vector3 A, Vector3 B, Vector3 C, Vector3 point)
 {
+    //create plane with AB and AC
     Vector3 AB = B - A;
     Vector3 AC = C - A;
     Vector3 normal;
@@ -782,12 +800,15 @@ Vector3 Game::ClosestPoint(Vector3 A, Vector3 B, Vector3 C, Vector3 point)
     float planeD = A.x * normal.x + A.y * normal.y + A.z * normal.z;
     float distance = point.Dot(normal) - planeD;
 
+    //Get intersection point of plane with ray from spohere to plane in plane normnal direction
     return point - distance * normal;
 }
 
 bool Game::PointInTriangle(Vector3 point, Vector3 A, Vector3 B, Vector3 C)
 {
-    if ((point.x >= A.x && point.x <= B.x) && (point.z >= A.z && point.z <= C.z))
+
+    //Get if point is between the bounds of the triangle
+    if ((point.x >= A.x && point.x <= B.x) && (point.z >= A.z && point.z <= C.z) )
     {
 
         return true;

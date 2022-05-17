@@ -505,7 +505,6 @@ bool Terrain::SmoothHeightMap(ID3D11Device* device)
 }
 
 
-
 bool Terrain::GenerateHeightMap(ID3D11Device* device)
 {
 	PerlinNoise noise = PerlinNoise();
@@ -514,10 +513,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 	int index;
 	float height = 0.0;
 
-	//float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
-	//m_randomMap = randomHeight;
-	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
-	//in this case I will run a sin-wave through the terrain in one axis.
+
 	float perlinMultiplier = 0.05;
 	float heightMultiplier = 30;
 	for (int j = 0; j < m_terrainHeight; j++)
@@ -540,7 +536,7 @@ bool Terrain::GenerateHeightMap(ID3D11Device* device)
 
 
 
-	// Volcano spawns only in interior 80% of the map
+	// Volcano spawns only in interior 60% of the map
 	this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8, m_heightMap), volcanoRadius, volcanoDepth, volcanoMountainRadius, volcanHeightMultiplier, m_heightMap);
 
 	result = CalculateNormals();
@@ -570,10 +566,7 @@ bool Terrain::ChangeHeightMap(ID3D11Device* device, float timeStep)
 	if (timeStep >= 0.99f)
 		timeStep = 1;
 
-	//float* randomHeight = GetRandomArray(0.0f, 4.0f, m_terrainHeight * m_terrainWidth);
-	//m_randomMap = randomHeight;
-	//loop through the terrain and set the hieghts how we want. This is where we generate the terrain
-	//in this case I will run a sin-wave through the terrain in one axis.
+
 	float perlinMultiplier = 0.05;
 	float heightMultiplier = 30;
 	for (int j = 0; j < m_terrainHeight; j++)
@@ -590,8 +583,6 @@ bool Terrain::ChangeHeightMap(ID3D11Device* device, float timeStep)
 
 	
 
-	// Volcano spawns only in interior 80% of the map
-	//this->Volcanize(this->GetHighestPeak(m_terrainHeight * 0.2, m_terrainHeight * 0.8, m_terrainWidth * 0.2, m_terrainWidth * 0.8), 4, 11, 20, 2);
 
 
 	result = CalculateNormals();
